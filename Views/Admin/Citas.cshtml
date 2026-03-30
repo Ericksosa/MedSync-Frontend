@@ -1,0 +1,67 @@
+@using MedSync_Frontend.Models.ViewModels
+@{
+    ViewData["Title"] = "Citas";
+    var citas = ViewBag.Citas as List<CitaViewModel> ?? [];
+    var estados = new[] { "Pendiente", "Confirmada", "En Progreso", "Completada", "Cancelada", "No Presentó" };
+}
+
+<div class="max-w-5xl mx-auto space-y-6">
+    <div>
+        <h1 class="text-2xl font-bold text-slate-800">Gestión de Citas</h1>
+        <p class="text-slate-500 text-sm mt-1">Todas las citas del sistema.</p>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        @if (!citas.Any())
+        {
+            <div class="text-center py-16">
+                <div class="flex justify-center mb-3">
+                    <div class="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center">
+                        <i data-lucide="calendar" class="w-7 h-7 text-slate-300"></i>
+                    </div>
+                </div>
+                <p class="text-slate-500">No hay citas registradas.</p>
+            </div>
+        }
+        else
+        {
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b border-slate-100">
+                    <tr>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Paciente</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Médico</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Fecha</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
+                        <th class="px-5 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    @foreach (var cita in citas)
+                    {
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-5 py-3 font-medium text-slate-700">@cita.NombrePaciente</td>
+                            <td class="px-5 py-3 text-slate-500">@cita.NombreMedico</td>
+                            <td class="px-5 py-3 text-slate-600">@cita.FechaHora.ToString("dd MMM yyyy • HH:mm")</td>
+                            <td class="px-5 py-3">
+                                <span class="px-2.5 py-1 rounded-full text-xs font-medium @cita.EstadoBadgeClass">@cita.Estado</span>
+                            </td>
+                            <td class="px-5 py-3">
+                                <form asp-controller="Admin" asp-action="CambiarEstadoCita" method="post" class="flex items-center gap-2">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="citaId" value="@cita.Id" />
+                                    <select name="estado" class="text-xs border border-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400">
+                                        @foreach (var e in estados)
+                                        {
+                                            <option value="@e" selected="@(cita.Estado == e)">@e</option>
+                                        }
+                                    </select>
+                                    <button type="submit" class="text-xs text-blue-600 hover:underline">Guardar</button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

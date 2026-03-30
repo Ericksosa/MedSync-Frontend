@@ -1,0 +1,61 @@
+@using MedSync_Frontend.Models.ViewModels
+@{
+    ViewData["Title"] = "Reportes de Ingresos";
+    var hospitales = ViewBag.Hospitales as List<HospitalViewModel> ?? [];
+    var reporte = ViewBag.Reporte;
+    var selectedHospital = ViewBag.SelectedHospital as int?;
+    var desde = ViewBag.Desde as string;
+    var hasta = ViewBag.Hasta as string;
+}
+
+<div class="max-w-4xl mx-auto space-y-6">
+    <div>
+        <h1 class="text-2xl font-bold text-slate-800">Reportes de Ingresos</h1>
+        <p class="text-slate-500 text-sm mt-1">Genera reportes financieros por hospital y rango de fechas.</p>
+    </div>
+
+    <!-- Filter form -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+        <form asp-controller="Admin" asp-action="Reportes" method="get" class="flex flex-wrap items-end gap-4">
+            <div class="flex-1 min-w-40">
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Hospital</label>
+                <select name="hospitalId" required class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <option value="">Seleccionar...</option>
+                    @foreach (var h in hospitales)
+                    {
+                        <option value="@h.Id" selected="@(selectedHospital == h.Id)">@h.Nombre</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Desde</label>
+                <input type="date" name="desde" value="@desde"
+                       class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Hasta</label>
+                <input type="date" name="hasta" value="@hasta"
+                       class="px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+            <button type="submit"
+                    class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors shadow-sm">
+                <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Generar Reporte
+            </button>
+        </form>
+    </div>
+
+    <!-- Report results -->
+    @if (reporte != null)
+    {
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <h3 class="font-semibold text-slate-800 mb-4">Resultados del Reporte</h3>
+            <pre class="bg-slate-50 rounded-xl p-4 text-sm text-slate-700 overflow-x-auto">@System.Text.Json.JsonSerializer.Serialize(reporte, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })</pre>
+        </div>
+    }
+    else if (selectedHospital.HasValue)
+    {
+        <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-sm text-yellow-700">
+            No se encontraron datos para el rango seleccionado.
+        </div>
+    }
+</div>

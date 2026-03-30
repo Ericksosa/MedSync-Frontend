@@ -1,0 +1,167 @@
+@using MedSync_Frontend.Models.ViewModels
+@{
+    ViewData["Title"] = "Panel de Control";
+    var paciente = ViewBag.Paciente as PacienteViewModel;
+    var proximaCita = ViewBag.ProximaCita as CitaViewModel;
+    var recientes = ViewBag.Recientes as List<CitaViewModel> ?? [];
+    var nombre = paciente?.Nombre ?? ViewBag.NombrePaciente as string ?? "Paciente";
+}
+
+<div class="max-w-5xl mx-auto space-y-6">
+
+    <!-- Header -->
+    <div class="flex items-start justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">Hola, @nombre 👋</h1>
+            <p class="text-slate-500 text-sm mt-1">Tu salud está en buenas manos. Revisa tus recordatorios de hoy.</p>
+        </div>
+        <a href="/Paciente/ReservarCita"
+           class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
+            <i data-lucide="plus" class="w-4 h-4"></i> Agendar nueva cita
+        </a>
+    </div>
+
+    <!-- Top cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+        <!-- Próxima cita -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            @if (proximaCita != null)
+            {
+                <div class="flex items-start gap-4">
+                    <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 flex-shrink-0">
+                        <i data-lucide="stethoscope" class="w-6 h-6"></i>
+                    </div>
+                    <div class="flex-1">
+                        <span class="text-xs font-semibold text-blue-600 uppercase tracking-wider">Próxima Cita</span>
+                        <h2 class="text-lg font-bold text-slate-800 mt-0.5">@proximaCita.NombreMedico</h2>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-2 text-xs text-slate-500">
+                            <span class="flex items-center gap-1.5">
+                                <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
+                                @proximaCita.FechaHora.ToString("ddd dd MMM")
+                            </span>
+                            <span class="flex items-center gap-1.5">
+                                <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i>
+                                @proximaCita.FechaHora.ToString("hh:mm tt")
+                            </span>
+                            <span class="flex items-center gap-1.5">
+                                <i data-lucide="building-2" class="w-3.5 h-3.5 text-slate-400"></i>
+                                @proximaCita.NombreHospital
+                            </span>
+                        </div>
+                        <div class="flex gap-2 mt-3">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-medium @proximaCita.EstadoBadgeClass">@proximaCita.Estado</span>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-6">
+                    <div class="flex justify-center mb-3">
+                        <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center">
+                            <i data-lucide="calendar" class="w-6 h-6 text-slate-300"></i>
+                        </div>
+                    </div>
+                    <p class="text-slate-500 text-sm">No tienes citas próximas.</p>
+                    <a href="/Paciente/ReservarCita" class="mt-3 inline-flex items-center gap-1 text-sm text-blue-600 font-medium hover:underline">
+                        Agendar ahora <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                    </a>
+                </div>
+            }
+        </div>
+
+        <!-- Expediente Médico -->
+        <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl shadow-sm p-5 text-white flex flex-col justify-between">
+            <div>
+                <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-3">
+                    <i data-lucide="folder-open" class="w-5 h-5"></i>
+                </div>
+                <h3 class="font-bold text-lg">Expediente Médico</h3>
+                <p class="text-blue-100 text-sm mt-1">Todos tus resultados, recetas y notas de evolución siempre a mano.</p>
+            </div>
+            <a href="/Paciente/Historial"
+               class="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white border border-white/30 px-4 py-2 rounded-xl hover:bg-white/10 transition-colors w-fit">
+                Acceder ahora <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Bottom grid: Activity + Vital signs -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        <!-- Actividad reciente -->
+        <div class="md:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-slate-800">Actividad reciente</h3>
+                <a href="/Paciente/Historial" class="text-xs text-blue-600 hover:underline font-medium">Ver historial completo</a>
+            </div>
+
+            @if (!recientes.Any())
+            {
+                <p class="text-slate-400 text-sm text-center py-4">No hay actividad registrada.</p>
+            }
+            else
+            {
+                <div class="divide-y divide-slate-50">
+                    @foreach (var cita in recientes)
+                    {
+                        <div class="flex items-center justify-between py-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                                    <i data-lucide="stethoscope" class="w-4 h-4"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-slate-700">@cita.NombreMedico</div>
+                                    <div class="text-xs text-slate-400">@cita.FechaHora.ToString("dd MMM yyyy")</div>
+                                </div>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-full text-xs font-medium @cita.EstadoBadgeClass">@cita.Estado</span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Signos vitales (static UI) -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <h3 class="font-semibold text-slate-800 mb-4">Signos Vitales</h3>
+            <div class="space-y-4">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                            <i data-lucide="heart" class="w-3.5 h-3.5 text-red-500"></i> Ritmo Cardíaco
+                        </span>
+                        <span class="text-sm font-bold text-slate-800">— <span class="text-xs font-normal text-slate-400">BPM</span></span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-100 rounded-full">
+                        <div class="h-1.5 bg-red-400 rounded-full w-3/4"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                            <i data-lucide="thermometer" class="w-3.5 h-3.5 text-orange-500"></i> Temperatura
+                        </span>
+                        <span class="text-sm font-bold text-slate-800">— <span class="text-xs font-normal text-slate-400">°C</span></span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-100 rounded-full">
+                        <div class="h-1.5 bg-orange-400 rounded-full w-1/2"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                            <i data-lucide="activity" class="w-3.5 h-3.5 text-blue-500"></i> Presión Arterial
+                        </span>
+                        <span class="text-sm font-bold text-slate-800">—/—</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-100 rounded-full">
+                        <div class="h-1.5 bg-blue-400 rounded-full w-2/3"></div>
+                    </div>
+                </div>
+            </div>
+            <p class="text-xs text-slate-400 mt-4 text-center">Sin datos sincronizados</p>
+        </div>
+    </div>
+</div>

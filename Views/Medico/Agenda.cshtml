@@ -1,0 +1,87 @@
+@{
+    ViewData["Title"] = "Agenda Semanal";
+    var medicoId = ViewBag.MedicoId;
+    var nombreDoctor = ViewBag.NombreDoctor as string ?? "Doctor";
+}
+
+<div class="max-w-5xl mx-auto">
+    <div class="mb-6">
+        <p class="text-xs text-blue-600 font-semibold uppercase tracking-wider">Agenda Semanal</p>
+        <h1 class="text-2xl font-bold text-slate-800">Dr. @nombreDoctor</h1>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+        <div id="calendar"></div>
+    </div>
+
+    <!-- Popup/modal for appointment detail -->
+    <div id="citaModal" class="hidden fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-xl p-6 w-80">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-slate-800" id="modal-nombre"></h3>
+                <button onclick="document.getElementById('citaModal').classList.add('hidden')"
+                    class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+            </div>
+            <div class="text-sm text-slate-600 space-y-2">
+                <div><span class="text-slate-400">Hora:</span> <span id="modal-hora"></span></div>
+                <div><span class="text-slate-400">Estado:</span> <span id="modal-estado"></span></div>
+                <div id="modal-notas-row" class="hidden"><span class="text-slate-400">Notas:</span> <span id="modal-notas" class="italic"></span></div>
+            </div>
+            <div class="mt-4 flex gap-2">
+                <a id="modal-ver-record" href="#"
+                   class="flex-1 text-center bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 rounded-xl transition-colors">
+                    Ver expediente
+                </a>
+                <button onclick="document.getElementById('citaModal').classList.add('hidden')"
+                        class="px-3 py-2 text-slate-500 hover:bg-slate-50 rounded-xl text-sm">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const calendarEl = document.getElementById('calendar');
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        locale: 'es',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'timeGridWeek,timeGridDay'
+        },
+        height: 'auto',
+        slotMinTime: '07:00:00',
+        slotMaxTime: '20:00:00',
+        buttonText: { today: 'Hoy', week: 'Semana', day: 'Día' },
+        events: async function (info, success, failure) {
+            const fecha = info.startStr.substring(0, 10);
+            const data = await fetch(`/Medico/ObtenerAgenda?fecha=${fecha}`).then(r => r.json());
+            success(data);
+        },
+        eventColor: '#3b82f6',
+        eventClick: function (info) {
+            const p = info.event.extendedProps;
+            document.getElementById('modal-nombre').textContent = info.event.title;
+            document.getElementById('modal-hora').textContent = info.event.start.toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('modal-estado').textContent = p.estado;
+
+            const notasRow = document.getElementById('modal-notas-row');
+            if (p.notas) {
+                notasRow.classList.remove('hidden');
+                document.getElementById('modal-notas').textContent = p.notas;
+            } else {
+                notasRow.classList.add('hidden');
+            }
+
+            document.getElementById('modal-ver-record').href = `/Medico/Paciente/${p.pacienteId}`;
+            document.getElementById('citaModal').classList.remove('hidden');
+        }
+    });
+    calendar.render();
+});
+</script>
+}

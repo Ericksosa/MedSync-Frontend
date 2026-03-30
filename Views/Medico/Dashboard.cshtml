@@ -1,0 +1,152 @@
+@using MedSync_Frontend.Models.ViewModels
+@{
+    ViewData["Title"] = "Dashboard";
+    var nombre = ViewBag.NombreDoctor as string ?? "Doctor";
+    var citas = ViewBag.CitasHoy as List<CitaViewModel> ?? [];
+    var total = ViewBag.TotalPacientes as int? ?? 0;
+    var enProgreso = citas.FirstOrDefault(c => c.Estado == "En Progreso");
+    var siguiente = citas.FirstOrDefault(c => c.Estado == "Confirmada" || c.Estado == "Pendiente");
+}
+
+<div class="max-w-5xl mx-auto space-y-6">
+
+    <!-- Header -->
+    <div class="flex items-start justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">Buenos días, Dr. @nombre</h1>
+            <p class="text-slate-500 text-sm mt-1">Tienes @total citas programadas para hoy</p>
+        </div>
+        <a href="/Medico/Agenda"
+           class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
+            <i data-lucide="plus" class="w-4 h-4"></i> Ver Agenda
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        <!-- Cola de pacientes -->
+        <div class="lg:col-span-1 space-y-4">
+            <!-- Registrar diagnóstico CTA -->
+            @if (enProgreso != null)
+            {
+                <a href="/Medico/Paciente/@enProgreso.PacienteId"
+                   class="block bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl p-4 transition-colors shadow-sm">
+                    <div class="flex items-center gap-2 mb-1">
+                        <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+                        <span class="font-semibold">Registrar diagnóstico</span>
+                    </div>
+                    <p class="text-emerald-100 text-xs">Cita en progreso • @enProgreso.NombrePaciente</p>
+                </a>
+            }
+
+            <!-- Queue -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-semibold text-slate-800">Cola de Pacientes</h3>
+                    <span class="text-xs bg-red-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <i data-lucide="radio" class="w-3 h-3"></i> LIVE
+                    </span>
+                </div>
+
+                @if (!citas.Any())
+                {
+                    <p class="text-slate-400 text-sm text-center py-4">Sin citas para hoy.</p>
+                }
+                else
+                {
+                    <div class="space-y-3">
+                        @foreach (var cita in citas.Take(5))
+                        {
+                            var badgeCls = cita.Estado == "En Progreso" ? "bg-green-100 text-green-700" :
+                                           cita.Estado == "Confirmada" ? "bg-blue-100 text-blue-700" :
+                                           "bg-slate-100 text-slate-600";
+                            var badgeTxt = cita.Estado == "En Progreso" ? "EN PROGRESO" :
+                                           cita.Estado == "Confirmada" ? "READY" : "PROGRAMADO";
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-600 flex-shrink-0">
+                                        @(cita.NombrePaciente.Length > 0 ? cita.NombrePaciente[0].ToString() : "?")
+                                    </div>
+                                    <div>
+                                        <a href="/Medico/Paciente/@cita.PacienteId" class="text-sm font-medium text-slate-700 hover:text-blue-600">
+                                            @cita.NombrePaciente
+                                        </a>
+                                        <div class="text-xs text-slate-400">@cita.Estado • @cita.FechaHora.ToString("HH:mm")</div>
+                                    </div>
+                                </div>
+                                <span class="text-xs px-2 py-0.5 rounded-full font-semibold @badgeCls">@badgeTxt</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-600">@total</div>
+                    <div class="text-xs text-slate-500 mt-1">Pacientes hoy</div>
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 text-center">
+                    <div class="text-2xl font-bold text-green-600">@citas.Count(c => c.Estado == "Completada")</div>
+                    <div class="text-xs text-slate-500 mt-1">Completadas</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agenda diaria -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-slate-800">Agenda Diaria</h3>
+                <span class="text-sm text-slate-500">@DateTime.Today.ToString("dddd, dd 'de' MMMM")</span>
+            </div>
+
+            @if (!citas.Any())
+            {
+                <div class="text-center py-12 text-slate-400">
+                    <div class="flex justify-center mb-3">
+                        <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center">
+                            <i data-lucide="calendar" class="w-6 h-6 text-slate-300"></i>
+                        </div>
+                    </div>
+                    <p class="text-sm">Sin citas para hoy.</p>
+                </div>
+            }
+            else
+            {
+                <div class="space-y-2">
+                    @foreach (var cita in citas.OrderBy(c => c.FechaHora))
+                    {
+                        var rowCls = cita.Estado == "En Progreso" ? "border-l-4 border-l-green-500 bg-green-50" :
+                                     cita.Estado == "Completada" ? "bg-slate-50 opacity-70" : "bg-white border border-slate-100";
+                        <div class="flex items-start gap-4 p-3 rounded-xl @rowCls">
+                            <div class="text-xs font-medium text-slate-500 w-16 flex-shrink-0 pt-0.5">
+                                @cita.FechaHora.ToString("HH:mm")
+                            </div>
+                            <div class="flex-1">
+                                <a href="/Medico/Paciente/@cita.PacienteId"
+                                   class="text-sm font-semibold text-slate-700 hover:text-blue-600">@cita.NombrePaciente</a>
+                                @if (!string.IsNullOrWhiteSpace(cita.Notas))
+                                {
+                                    <div class="text-xs text-slate-400 mt-0.5">@cita.Notas</div>
+                                }
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded-full text-xs @cita.EstadoBadgeClass">@cita.Estado</span>
+                                @if (cita.Estado == "Confirmada" || cita.Estado == "Pendiente")
+                                {
+                                    <form asp-controller="Medico" asp-action="CambiarEstado" method="post" class="inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="citaId" value="@cita.Id" />
+                                        <input type="hidden" name="estado" value="En Progreso" />
+                                        <button type="submit" class="text-xs text-green-600 hover:underline font-medium">Iniciar</button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>

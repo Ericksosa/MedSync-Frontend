@@ -1,0 +1,117 @@
+@using MedSync_Frontend.Models.ViewModels
+@{
+    ViewData["Title"] = "Administrador";
+    var hospitales = ViewBag.Hospitales as List<HospitalViewModel> ?? [];
+    var totalCitas = ViewBag.TotalCitas as int? ?? 0;
+    var totalMedicos = ViewBag.TotalMedicos as int? ?? 0;
+    var activos = hospitales.Count(h => h.EstaActivo);
+}
+
+<div class="max-w-5xl mx-auto space-y-6">
+
+    <div>
+        <h1 class="text-2xl font-bold text-slate-800">Estadísticas Clave</h1>
+        <p class="text-slate-500 text-sm mt-1">Resumen ejecutivo del rendimiento operativo.</p>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-3">
+                <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-600">
+                    <i data-lucide="dollar-sign" class="w-5 h-5"></i>
+                </div>
+                <a href="/Admin/Reportes" class="text-xs text-blue-600 hover:underline font-medium">Ver reporte</a>
+            </div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Citas Programadas</p>
+            <p class="text-3xl font-bold text-slate-800 mt-1">@totalCitas</p>
+            <p class="text-xs text-slate-400 mt-1">Total en el sistema</p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-3">
+                <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                </div>
+                <a href="/Admin/Citas" class="text-xs text-blue-600 hover:underline font-medium">Ver citas</a>
+            </div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Hospitales Activos</p>
+            <p class="text-3xl font-bold text-slate-800 mt-1">@activos</p>
+            <p class="text-xs text-slate-400 mt-1">De @hospitales.Count total</p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-3">
+                <div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600">
+                    <i data-lucide="stethoscope" class="w-5 h-5"></i>
+                </div>
+                <a href="/Admin/Medicos" class="text-xs text-blue-600 hover:underline font-medium">Ver médicos</a>
+            </div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Doctores Activos</p>
+            <p class="text-3xl font-bold text-slate-800 mt-1">@totalMedicos</p>
+            <p class="text-xs text-slate-400 mt-1">
+                Capacidad Total: @totalMedicos
+                <div class="w-full h-1.5 bg-slate-100 rounded-full mt-1.5">
+                    <div class="h-1.5 bg-blue-500 rounded-full" style="width: @(totalMedicos > 0 ? "86" : "0")%"></div>
+                </div>
+            </p>
+        </div>
+    </div>
+
+    <!-- Hospital status table -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-800">Estatus de Sedes</h3>
+            <a href="/Admin/Hospitales" class="text-xs text-blue-600 hover:underline font-medium">Gestionar</a>
+        </div>
+
+        @if (!hospitales.Any())
+        {
+            <p class="text-slate-400 text-sm text-center py-4">No hay hospitales registrados.</p>
+        }
+        else
+        {
+            <div class="divide-y divide-slate-50">
+                @foreach (var h in hospitales)
+                {
+                    var statusCls = h.EstaActivo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600";
+                    var statusTxt = h.EstaActivo ? "OPERATIVO" : "INACTIVO";
+                    var dotCls = h.EstaActivo ? "bg-green-500" : "bg-red-400";
+                    <div class="flex items-center justify-between py-3">
+                        <div class="flex items-center gap-3">
+                            <span class="w-2 h-2 rounded-full @dotCls flex-shrink-0"></span>
+                            <span class="text-sm font-medium text-slate-700">@h.Nombre</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            @if (!string.IsNullOrWhiteSpace(h.Direccion))
+                            {
+                                <span class="text-xs text-slate-400 flex items-center gap-1">
+                                    <i data-lucide="map-pin" class="w-3 h-3"></i> @h.Direccion
+                                </span>
+                            }
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold @statusCls">@statusTxt</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- Quick links -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        @foreach (var (icon, label, url, bg, fg) in new[] {
+            ("building-2", "Hospitales", "/Admin/Hospitales", "bg-blue-50", "text-blue-600"),
+            ("stethoscope", "Médicos", "/Admin/Medicos", "bg-purple-50", "text-purple-600"),
+            ("users", "Pacientes", "/Admin/Pacientes", "bg-green-50", "text-green-600"),
+            ("bar-chart-3", "Reportes", "/Admin/Reportes", "bg-orange-50", "text-orange-600")
+        })
+        {
+            <a href="@url" class="bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-3 hover:bg-slate-50 hover:border-slate-200 transition-colors shadow-sm group">
+                <div class="w-9 h-9 @bg rounded-xl flex items-center justify-center @fg flex-shrink-0">
+                    <i data-lucide="@icon" class="w-4 h-4"></i>
+                </div>
+                <span class="text-sm font-medium text-slate-700 group-hover:text-slate-900">@label</span>
+            </a>
+        }
+    </div>
+</div>
