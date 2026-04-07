@@ -99,6 +99,14 @@ public class AdminController : BaseController
 
     // ─── Especialidades ──────────────────────────────────────────────────────────
     [HttpGet]
+    public async Task<IActionResult> ObtenerMedicosPorHospital(int hospitalId)
+    {
+        if (!Auth.IsAuthenticated()) return Unauthorized();
+        var result = await Api.GetAsync<List<MedicoViewModel>>($"/api/doctors/hospital/{hospitalId}");
+        return Json(result.Data ?? []);
+    }
+
+    [HttpGet]
     public async Task<IActionResult> ObtenerEspecialidades(int hospitalId)
     {
         if (!Auth.IsAuthenticated()) return Unauthorized();
@@ -134,7 +142,12 @@ public class AdminController : BaseController
             if (r.Success && r.Data != null) medicosAll.AddRange(r.Data);
         }
 
-        ViewBag.Medicos = medicosAll;
+        ViewBag.Medicos = medicosAll
+            .GroupBy(m => m.Id)
+            .Select(g => g.First())
+            .OrderBy(m => m.Apellido)
+            .ThenBy(m => m.Nombre)
+            .ToList();
         ViewBag.Hospitales = hospitales;
 
         return View();
@@ -168,6 +181,33 @@ public class AdminController : BaseController
         var result = await Api.PatchAsync<object>($"/api/doctors/{id}/estado", new MedicoEstadoViewModel { EstaActivo = estaActivo });
         if (!result.Success) SetError(result.Error ?? "Error al actualizar estado.");
         else SetSuccess(estaActivo ? "Médico activado." : "Médico desactivado.");
+
+        return RedirectToAction("Medicos");
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ObtenerHospitalesAsignadosMedico(int medicoId)
+    {
+        if (!Auth.IsAuthenticated()) return Unauthorized();
+
+        var result = await Api.GetAsync<List<HospitalAsignadoViewModel>>($"/api/doctors/{medicoId}/hospitales");
+        return Json(result.Data ?? []);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ActualizarHospitalesMedico(int medicoId, List<int> hospitalesIds)
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        var payload = new HospitalesAsignadosActualizarViewModel
+        {
+            HospitalesIds = hospitalesIds
+        };
+
+        var result = await Api.PutAsync<object>($"/api/doctors/{medicoId}/hospitales", payload);
+        if (!result.Success) SetError(result.Error ?? "No se pudieron actualizar los hospitales del médico.");
+        else SetSuccess("Hospitales del médico actualizados.");
 
         return RedirectToAction("Medicos");
     }
@@ -207,9 +247,16 @@ public class AdminController : BaseController
     }
 
     // ─── Pacientes ───────────────────────────────────────────────────────────────
-    public IActionResult Pacientes()
+    public async Task<IActionResult> Pacientes()
     {
         var check = CheckAccess(); if (check != null) return check;
+
+        var pacientesResult = await Api.GetAsync<List<PacienteViewModel>>("/api/patients");
+        ViewBag.Pacientes = pacientesResult.Data ?? [];
+
+        if (!pacientesResult.Success)
+            SetError(pacientesResult.Error ?? "No se pudo cargar el listado de pacientes.");
+
         return View();
     }
 
@@ -298,17 +345,140 @@ public class AdminController : BaseController
         return View();
     }
 
+    [HttpGet]
+    public async Task<IActionResult> ObtenerCitasPagablesPorHospital(int hospitalId)
+    {
+        if (!Auth.IsAuthenticated()) return Unauthorized();
+
+        var citasResult = await Api.GetAsync<List<CitaViewModel>>($"/api/appointments/hospital/{hospitalId}");
+        var pagosResult = await Api.GetAsync<List<PagoViewModel>>($"/api/payments/hospital/{hospitalId}");
+
+        var citas = citasResult.Data ?? [];
+        var pagos = pagosResult.Data ?? [];
+        var citasConPago = pagos.Select(p => p.CitaId).ToHashSet();
+
+        var citasDisponibles = citas
+            .Where(c => c.Estado != "Cancelada" && c.Estado != "No Presentó" && !citasConPago.Contains(c.Id))
+            .OrderBy(c => c.FechaHora)
+            .ToList();
+
+        return Json(citasDisponibles);
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> RegistrarPago(PagoCrearViewModel model)
     {
         var check = CheckAccess(); if (check != null) return check;
 
+        model.Estado = "Pending";
         var result = await Api.PostAsync<PagoViewModel>("/api/payments", model);
         if (!result.Success) SetError(result.Error ?? "Error al registrar pago.");
         else SetSuccess("Pago registrado.");
 
         return RedirectToAction("Pagos");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MarcarPagoCompletado(int id)
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        var result = await Api.PatchAsync<object>($"/api/payments/{id}/estado", new PagoEstadoViewModel { Estado = "Completed" });
+        if (!result.Success) SetError(result.Error ?? "Error al confirmar pago.");
+        else SetSuccess("Pago marcado como completado.");
+
+        return RedirectToAction("Pagos");
+    }
+
+    // ─── Cobros (RF17) ───────────────────────────────────────────────────────────
+    public async Task<IActionResult> Cobros()
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        var hospitalesResult = await Api.GetAsync<List<HospitalViewModel>>("/api/hospitals/activos");
+        var hospitales = hospitalesResult.Data ?? [];
+
+        var cobrosAll = new List<CobroViewModel>();
+        var erroresCobros = new List<string>();
+        foreach (var h in hospitales)
+        {
+            var r = await Api.GetAsync<List<CobroViewModel>>($"/api/cobros/hospital/{h.Id}");
+            if (r.Success && r.Data != null) cobrosAll.AddRange(r.Data);
+            else if (!r.Success)
+                erroresCobros.Add($"{h.Nombre} (HTTP {r.StatusCode})");
+        }
+
+        ViewBag.Cobros = cobrosAll.OrderByDescending(c => c.FechaEmision).ToList();
+        ViewBag.Hospitales = hospitales;
+        ViewBag.CobrosEndpointDisponible = !erroresCobros.Any();
+
+        if (erroresCobros.Any())
+            SetError($"No se pudo consultar cobros en algunos hospitales: {string.Join(", ", erroresCobros)}.");
+
+        return View();
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RegistrarCobro(CobroCrearViewModel model)
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        var result = await Api.PostAsync<CobroViewModel>("/api/cobros", model);
+        if (!result.Success) SetError(result.Error ?? "Error al registrar cobro.");
+        else SetSuccess("Cobro registrado correctamente.");
+
+        return RedirectToAction("Cobros");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> MarcarCobroPagado(int id)
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        var result = await Api.PatchAsync<object>($"/api/cobros/{id}/estado", new { estado = "Pagado" });
+        if (!result.Success) SetError(result.Error ?? "Error al actualizar cobro.");
+        else SetSuccess("Cobro marcado como pagado.");
+
+        return RedirectToAction("Cobros");
+    }
+
+    // ─── Estado de Cuenta del Doctor (RF18) ──────────────────────────────────────
+    public async Task<IActionResult> EstadoCuenta(int? hospitalId)
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        var hospitalesResult = await Api.GetAsync<List<HospitalViewModel>>("/api/hospitals/activos");
+        var hospitales = hospitalesResult.Data ?? [];
+        ViewBag.Hospitales = hospitales;
+        ViewBag.SelectedHospital = hospitalId;
+
+        if (hospitalId.HasValue)
+        {
+            var medicosResult = await Api.GetAsync<List<MedicoViewModel>>($"/api/doctors/hospital/{hospitalId}");
+            var medicos = medicosResult.Data ?? [];
+
+            var balances = new List<BalanceMedicoViewModel>();
+            foreach (var m in medicos)
+            {
+                var balResult = await Api.GetAsync<BalanceMedicoViewModel>($"/api/cobros/doctor/{m.Id}/balance");
+                if (balResult.Success && balResult.Data != null)
+                {
+                    balResult.Data.NombreMedico = m.NombreCompleto;
+                    balances.Add(balResult.Data);
+                }
+                else
+                {
+                    balances.Add(new BalanceMedicoViewModel { NombreMedico = m.NombreCompleto });
+                }
+            }
+            ViewBag.Balances = balances;
+        }
+
+        return View();
     }
 
     // ─── Reportes ────────────────────────────────────────────────────────────────
@@ -321,7 +491,7 @@ public class AdminController : BaseController
 
         if (hospitalId.HasValue && !string.IsNullOrWhiteSpace(desde) && !string.IsNullOrWhiteSpace(hasta))
         {
-            var result = await Api.GetAsync<object>($"/api/reports/hospital/{hospitalId}/ingresos?desde={desde}&hasta={hasta}");
+            var result = await Api.GetAsync<ReporteIngresosViewModel>($"/api/reports/hospital/{hospitalId}/ingresos?desde={desde}&hasta={hasta}");
             ViewBag.Reporte = result.Data;
             ViewBag.SelectedHospital = hospitalId;
             ViewBag.Desde = desde;

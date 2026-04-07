@@ -1,0 +1,153 @@
+@using MedSync_Frontend.Models.ViewModels
+@{
+    ViewData["Title"] = "Panel de Control";
+    var hospitales = ViewBag.Hospitales as List<HospitalViewModel> ?? [];
+    var admins = ViewBag.Administradores as List<UsuarioViewModel> ?? [];
+    var totalCitas = ViewBag.TotalCitas as int? ?? 0;
+    var totalMedicos = ViewBag.TotalMedicos as int? ?? 0;
+    var totalPacientes = ViewBag.TotalPacientes as int? ?? 0;
+    var activos = hospitales.Count(h => h.EstaActivo);
+}
+
+<div class="max-w-5xl mx-auto space-y-6">
+
+    <div class="flex items-start justify-between">
+        <div>
+            <div class="flex items-center gap-2 mb-1">
+                <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full uppercase tracking-wider">Sistema Global</span>
+            </div>
+            <h1 class="text-2xl font-bold text-slate-800">Panel de Super Administrador</h1>
+            <p class="text-slate-500 text-sm mt-1">Control total del sistema MedSync.</p>
+        </div>
+        <a href="/SuperAdmin/Administradores"
+           class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition-colors shadow-sm">
+            <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Administrador
+        </a>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 mb-3">
+                <i data-lucide="building-2" class="w-5 h-5"></i>
+            </div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Hospitales</p>
+            <p class="text-3xl font-bold text-slate-800 mt-1">@activos</p>
+            <p class="text-xs text-slate-400 mt-1">De @hospitales.Count total</p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 mb-3">
+                <i data-lucide="stethoscope" class="w-5 h-5"></i>
+            </div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Doctores</p>
+            <p class="text-3xl font-bold text-slate-800 mt-1">@totalMedicos</p>
+            <p class="text-xs text-slate-400 mt-1">Activos en el sistema</p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-600 mb-3">
+                <i data-lucide="users" class="w-5 h-5"></i>
+            </div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Pacientes</p>
+            <p class="text-3xl font-bold text-slate-800 mt-1">@totalPacientes</p>
+            <p class="text-xs text-slate-400 mt-1">Registrados</p>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-600 mb-3">
+                <i data-lucide="calendar-check" class="w-5 h-5"></i>
+            </div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Citas</p>
+            <p class="text-3xl font-bold text-slate-800 mt-1">@totalCitas</p>
+            <p class="text-xs text-slate-400 mt-1">Total programadas</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Administradores activos -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-slate-800">Administradores</h3>
+                <a href="/SuperAdmin/Administradores" class="text-xs text-indigo-600 hover:underline font-medium">Ver todos</a>
+            </div>
+            @if (!admins.Any())
+            {
+                <p class="text-slate-400 text-sm text-center py-6">
+                    No hay administradores registrados o el endpoint no está disponible aún.
+                </p>
+            }
+            else
+            {
+                <div class="divide-y divide-slate-50">
+                    @foreach (var a in admins.Take(5))
+                    {
+                        <div class="flex items-center justify-between py-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-bold">
+                                    @(a.NombreCompleto.Length > 0 ? a.NombreCompleto[0].ToString().ToUpper() : "A")
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-slate-700">@a.NombreCompleto</div>
+                                    <div class="text-xs text-slate-400">@a.Email</div>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-xs font-semibold @(a.EstaActivo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600")">
+                                @(a.EstaActivo ? "Activo" : "Inactivo")
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Sedes del sistema -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-slate-800">Sedes del Sistema</h3>
+                <a href="/SuperAdmin/Hospitales" class="text-xs text-indigo-600 hover:underline font-medium">Gestionar</a>
+            </div>
+            @if (!hospitales.Any())
+            {
+                <p class="text-slate-400 text-sm text-center py-6">No hay hospitales registrados.</p>
+            }
+            else
+            {
+                <div class="divide-y divide-slate-50">
+                    @foreach (var h in hospitales)
+                    {
+                        var dotCls = h.EstaActivo ? "bg-green-500" : "bg-red-400";
+                        var badge = h.EstaActivo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600";
+                        <div class="flex items-center justify-between py-3">
+                            <div class="flex items-center gap-3">
+                                <span class="w-2 h-2 rounded-full @dotCls flex-shrink-0"></span>
+                                <span class="text-sm font-medium text-slate-700">@h.Nombre</span>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold @badge">
+                                @(h.EstaActivo ? "OPERATIVO" : "INACTIVO")
+                            </span>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Accesos rápidos -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        @foreach (var (icon, label, url, bg, fg) in new[] {
+            ("user-check", "Administradores", "/SuperAdmin/Administradores", "bg-indigo-50", "text-indigo-600"),
+            ("building-2", "Hospitales", "/SuperAdmin/Hospitales", "bg-blue-50", "text-blue-600"),
+            ("users", "Usuarios", "/SuperAdmin/Usuarios", "bg-slate-50", "text-slate-600"),
+            ("shield", "Sistema", "/SuperAdmin/Dashboard", "bg-purple-50", "text-purple-600")
+        })
+        {
+            <a href="@url" class="bg-white border border-slate-100 rounded-2xl p-4 flex items-center gap-3 hover:bg-slate-50 hover:border-slate-200 transition-colors shadow-sm group">
+                <div class="w-9 h-9 @bg rounded-xl flex items-center justify-center @fg flex-shrink-0">
+                    <i data-lucide="@icon" class="w-4 h-4"></i>
+                </div>
+                <span class="text-sm font-medium text-slate-700 group-hover:text-slate-900">@label</span>
+            </a>
+        }
+    </div>
+</div>

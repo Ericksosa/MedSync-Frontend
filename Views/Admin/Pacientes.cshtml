@@ -1,5 +1,6 @@
 @{
     ViewData["Title"] = "Registrar Paciente";
+    var pacientes = ViewBag.Pacientes as List<MedSync_Frontend.Models.ViewModels.PacienteViewModel> ?? [];
 }
 
 <div class="max-w-2xl mx-auto">
@@ -65,5 +66,47 @@
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="max-w-5xl mx-auto mt-8">
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <h3 class="font-semibold text-slate-800">Pacientes Registrados</h3>
+            <span class="text-xs text-slate-400">Total: @pacientes.Count</span>
+        </div>
+
+        @if (!pacientes.Any())
+        {
+            <div class="text-center py-10 text-slate-400 text-sm">
+                Aún no hay pacientes registrados.
+            </div>
+        }
+        else
+        {
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Nombre</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Documento</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Teléfono</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Nacimiento</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    @foreach (var p in pacientes.Take(20))
+                    {
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-5 py-3 font-medium text-slate-700">@p.Nombre @p.Apellido</td>
+                            <td class="px-5 py-3 text-slate-500">@p.DocumentoId</td>
+                            <td class="px-5 py-3 text-slate-500">@(string.IsNullOrWhiteSpace(p.Email) ? "-" : p.Email)</td>
+                            <td class="px-5 py-3 text-slate-500">@(string.IsNullOrWhiteSpace(p.Telefono) ? "-" : p.Telefono)</td>
+                            <td class="px-5 py-3 text-slate-500">@p.FechaNacimiento.ToString("dd/MM/yyyy")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
     </div>
 </div>

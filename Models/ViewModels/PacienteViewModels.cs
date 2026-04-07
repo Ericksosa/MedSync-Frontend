@@ -13,7 +13,17 @@ public class PacienteViewModel
     public string? Telefono { get; set; }
     public DateTime FechaNacimiento { get; set; }
 
-    public int Edad => (int)((DateTime.Today - FechaNacimiento).TotalDays / 365.25);
+    public int? Edad
+    {
+        get
+        {
+            if (FechaNacimiento == default || FechaNacimiento > DateTime.Today) return null;
+
+            var edad = DateTime.Today.Year - FechaNacimiento.Year;
+            if (FechaNacimiento.Date > DateTime.Today.AddYears(-edad)) edad--;
+            return edad;
+        }
+    }
 }
 
 public class PacienteCrearViewModel
@@ -32,4 +42,5 @@ public class PacienteActualizarViewModel
     [Required] public string Apellido { get; set; } = "";
     [EmailAddress] public string? Email { get; set; }
     public string? Telefono { get; set; }
+    public DateTime? FechaNacimiento { get; set; }
 }

@@ -4,13 +4,15 @@
     var pagos = ViewBag.Pagos as List<PagoViewModel> ?? [];
     var hospitales = ViewBag.Hospitales as List<HospitalViewModel> ?? [];
     var total = pagos.Where(p => p.Estado == "Completed").Sum(p => p.Monto);
+    var pendientes = pagos.Count(p => p.Estado == "Pending");
+    var completados = pagos.Count(p => p.Estado == "Completed");
 }
 
 <div class="max-w-5xl mx-auto space-y-6">
     <div class="flex items-start justify-between">
         <div>
             <h1 class="text-2xl font-bold text-slate-800">Pagos</h1>
-            <p class="text-slate-500 text-sm mt-1">Registro de pagos por consulta.</p>
+            <p class="text-slate-500 text-sm mt-1">Selecciona una cita programada y registra el pago con estado pendiente por defecto.</p>
         </div>
         <button onclick="document.getElementById('modalPago').classList.remove('hidden')"
                 class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
@@ -18,8 +20,7 @@
         </button>
     </div>
 
-    <!-- Summary -->
-    <div class="grid grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <p class="text-xs text-slate-400 uppercase font-semibold">Total Completado</p>
             <p class="text-2xl font-bold text-green-600 mt-1">$@total.ToString("N2")</p>
@@ -30,11 +31,14 @@
         </div>
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <p class="text-xs text-slate-400 uppercase font-semibold">Pendientes</p>
-            <p class="text-2xl font-bold text-yellow-600 mt-1">@pagos.Count(p => p.Estado == "Pending")</p>
+            <p class="text-2xl font-bold text-yellow-600 mt-1">@pendientes</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <p class="text-xs text-slate-400 uppercase font-semibold">Completados</p>
+            <p class="text-2xl font-bold text-blue-600 mt-1">@completados</p>
         </div>
     </div>
 
-    <!-- Table -->
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         @if (!pagos.Any())
         {
@@ -52,11 +56,14 @@
             <table class="w-full text-sm">
                 <thead class="bg-slate-50 border-b border-slate-100">
                     <tr>
-                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cita #</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Paciente</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Médico</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Fecha cita</th>
                         <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Monto</th>
                         <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Método</th>
                         <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
-                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Fecha</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Fecha pago</th>
+                        <th class="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Acción</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
@@ -66,13 +73,28 @@
                                         p.Estado == "Pending" ? "bg-yellow-100 text-yellow-700" :
                                         "bg-blue-100 text-blue-700";
                         <tr class="hover:bg-slate-50 transition-colors">
-                            <td class="px-5 py-3 text-slate-500">#@p.CitaId</td>
+                            <td class="px-5 py-3 font-medium text-slate-700">@p.NombrePaciente</td>
+                            <td class="px-5 py-3 text-slate-500">@p.NombreMedico</td>
+                            <td class="px-5 py-3 text-slate-500">@p.FechaCita.ToString("dd MMM yyyy HH:mm")</td>
                             <td class="px-5 py-3 font-semibold text-slate-800">$@p.Monto.ToString("N2")</td>
                             <td class="px-5 py-3 text-slate-500">@p.MetodoPago</td>
                             <td class="px-5 py-3">
                                 <span class="px-2.5 py-1 rounded-full text-xs font-medium @estadoCls">@p.Estado</span>
                             </td>
                             <td class="px-5 py-3 text-slate-400">@p.FechaPago.ToString("dd MMM yyyy")</td>
+                            <td class="px-5 py-3 text-right">
+                                @if (p.Estado == "Pending")
+                                {
+                                    <form asp-controller="Admin" asp-action="MarcarPagoCompletado" method="post" class="inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@p.Id" />
+                                        <button type="submit"
+                                                class="text-xs text-blue-600 hover:text-blue-800 font-medium border border-blue-200 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
+                                            Confirmar pago
+                                        </button>
+                                    </form>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -81,7 +103,6 @@
     </div>
 </div>
 
-<!-- Modal: Registrar Pago -->
 <div id="modalPago" class="hidden fixed inset-0 bg-black/30 flex items-center justify-center z-50">
     <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
         <div class="flex items-center justify-between mb-4">
@@ -95,8 +116,22 @@
             @Html.AntiForgeryToken()
             <div class="space-y-3 mb-4">
                 <div>
-                    <label class="block text-xs text-slate-500 mb-1">ID de la Cita</label>
-                    <input name="CitaId" required type="number" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    <label class="block text-xs text-slate-500 mb-1">Hospital</label>
+                    <select name="HospitalId" id="pago-hospitalId" required onchange="cargarCitasPagables(this.value)"
+                            class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="">Seleccionar hospital...</option>
+                        @foreach (var h in hospitales)
+                        {
+                            <option value="@h.Id">@h.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Cita programada</label>
+                    <select name="CitaId" id="pago-citaId" required disabled
+                            class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="">Selecciona un hospital primero...</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block text-xs text-slate-500 mb-1">Monto</label>
@@ -111,13 +146,8 @@
                         <option value="Insurance">Seguro</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block text-xs text-slate-500 mb-1">Estado</label>
-                    <select name="Estado" required class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        <option value="Completed">Completado</option>
-                        <option value="Pending">Pendiente</option>
-                    </select>
-                </div>
+                <input type="hidden" name="Estado" value="Pending" />
+                <p class="text-xs text-slate-400">El pago se registra como <span class="font-semibold text-slate-600">Pendiente</span> y luego se confirma desde la tabla.</p>
             </div>
             <div class="flex gap-2 justify-end">
                 <button type="button" onclick="document.getElementById('modalPago').classList.add('hidden')"
@@ -127,3 +157,39 @@
         </form>
     </div>
 </div>
+
+@section Scripts {
+<script>
+async function cargarCitasPagables(hospitalId) {
+    const sel = document.getElementById('pago-citaId');
+    sel.disabled = true;
+    sel.innerHTML = '<option value="">Cargando...</option>';
+
+    if (!hospitalId) {
+        sel.innerHTML = '<option value="">Selecciona un hospital primero...</option>';
+        return;
+    }
+
+    try {
+        const citas = await fetch(`/Admin/ObtenerCitasPagablesPorHospital?hospitalId=${hospitalId}`).then(r => r.json());
+        sel.innerHTML = '<option value="">Seleccionar cita...</option>';
+
+        citas.forEach(c => {
+            const opt = document.createElement('option');
+            const fecha = new Date(c.fechaHora).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' });
+            opt.value = c.id;
+            opt.textContent = `${fecha} - ${c.nombrePaciente} con Dr. ${c.nombreMedico}`;
+            sel.appendChild(opt);
+        });
+
+        if (citas.length === 0) {
+            sel.innerHTML = '<option value="">No hay citas disponibles para pago</option>';
+        } else {
+            sel.disabled = false;
+        }
+    } catch {
+        sel.innerHTML = '<option value="">Error al cargar citas</option>';
+    }
+}
+</script>
+}

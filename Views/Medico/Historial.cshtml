@@ -48,8 +48,22 @@
                             <td class="px-5 py-3">
                                 <span class="px-2.5 py-1 rounded-full text-xs font-medium @cita.EstadoBadgeClass">@cita.Estado</span>
                             </td>
-                            <td class="px-5 py-3">
+                                <td class="px-5 py-3 flex items-center gap-2 flex-wrap">
                                 <a href="/Medico/Paciente/@cita.PacienteId" class="text-xs text-blue-600 hover:underline">Ver expediente</a>
+                                @if (cita.Estado == "Pendiente" || cita.Estado == "Confirmada")
+                                {
+                                    <form asp-controller="Medico" asp-action="CambiarEstado" method="post" class="inline"
+                                          onsubmit="return confirm('¿Cancelar esta cita?')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="citaId" value="@cita.Id" />
+                                        <input type="hidden" name="estado" value="Cancelada" />
+                                        <input type="hidden" name="returnUrl" value="/Medico/Historial" />
+                                        <button type="submit"
+                                                class="text-xs text-red-500 hover:text-red-700 font-medium border border-red-200 hover:bg-red-50 px-2 py-1 rounded-lg transition-colors">
+                                            Cancelar
+                                        </button>
+                                    </form>
+                                }
                             </td>
                         </tr>
                     }

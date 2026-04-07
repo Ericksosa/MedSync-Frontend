@@ -1,0 +1,69 @@
+@using MedSync_Frontend.Models.ViewModels
+@{
+    ViewData["Title"] = "Completar Citas";
+    var citas = ViewBag.Citas as List<CitaViewModel> ?? [];
+    var fecha = ViewBag.Fecha as string ?? DateTime.Today.ToString("yyyy-MM-dd");
+}
+
+<div class="max-w-5xl mx-auto space-y-5">
+    <div>
+        <h1 class="text-2xl font-bold text-slate-800">Completar Citas</h1>
+        <p class="text-slate-500 text-sm mt-1">Marca como completadas las citas atendidas para reflejarlo en el historial del paciente.</p>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+        <form method="get" asp-controller="Medico" asp-action="CompletarCitas" class="flex items-end gap-3">
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Fecha</label>
+                <input type="date" name="fecha" value="@fecha" class="px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+            <button type="submit" class="px-4 py-2 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl">Filtrar</button>
+        </form>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        @if (!citas.Any())
+        {
+            <div class="text-center py-16 text-slate-500">No hay citas para la fecha seleccionada.</div>
+        }
+        else
+        {
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50 border-b border-slate-100">
+                    <tr>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Paciente</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Hospital</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Hora</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
+                        <th class="px-5 py-3 text-right"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    @foreach (var cita in citas)
+                    {
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-5 py-3 text-slate-700 font-medium">@cita.NombrePaciente</td>
+                            <td class="px-5 py-3 text-slate-500">@cita.NombreHospital</td>
+                            <td class="px-5 py-3 text-slate-600">@cita.FechaHora.ToString("HH:mm")</td>
+                            <td class="px-5 py-3"><span class="px-2.5 py-1 rounded-full text-xs font-medium @cita.EstadoBadgeClass">@cita.Estado</span></td>
+                            <td class="px-5 py-3 text-right">
+                                @if (cita.Estado != "Completada" && cita.Estado != "Cancelada" && cita.Estado != "No Presentó")
+                                {
+                                    <form asp-controller="Medico" asp-action="CambiarEstado" method="post" class="inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="citaId" value="@cita.Id" />
+                                        <input type="hidden" name="estado" value="Completada" />
+                                        <input type="hidden" name="returnUrl" value="/Medico/CompletarCitas?fecha=@fecha" />
+                                        <button type="submit" class="text-xs text-green-600 hover:text-green-700 font-medium border border-green-200 hover:bg-green-50 px-3 py-1.5 rounded-lg transition-colors">
+                                            Marcar completada
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

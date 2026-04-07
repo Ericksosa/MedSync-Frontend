@@ -35,6 +35,8 @@ public class DisponibilidadViewModel
     public int Id { get; set; }
     public int MedicoId { get; set; }
     public string NombreMedico { get; set; } = "";
+    public int? HospitalId { get; set; }
+    public string NombreHospital { get; set; } = "";
     public int DiaSemana { get; set; }
     public string HoraInicio { get; set; } = "";
     public string HoraFin { get; set; } = "";
@@ -55,7 +57,19 @@ public class DisponibilidadViewModel
 public class DisponibilidadCrearViewModel
 {
     [Required] public int MedicoId { get; set; }
+    public int? HospitalId { get; set; }
     [Required, Range(0, 6)] public int DiaSemana { get; set; }
     [Required] public string HoraInicio { get; set; } = "";
     [Required] public string HoraFin { get; set; } = "";
+}
+
+public class HospitalAsignadoViewModel
+{
+    public int HospitalId { get; set; }
+    public string NombreHospital { get; set; } = "";
+}
+
+public class HospitalesAsignadosActualizarViewModel
+{
+    [Required] public List<int> HospitalesIds { get; set; } = [];
 }

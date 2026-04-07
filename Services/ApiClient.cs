@@ -123,6 +123,8 @@ public class ApiClient
             using var doc = JsonDocument.Parse(raw);
             if (doc.RootElement.TryGetProperty("message", out var msg))
                 error = msg.GetString() ?? raw;
+            else if (doc.RootElement.TryGetProperty("mensaje", out var mensaje))
+                error = mensaje.GetString() ?? raw;
             else if (doc.RootElement.TryGetProperty("title", out var title))
                 error = title.GetString() ?? raw;
         }

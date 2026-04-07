@@ -52,15 +52,26 @@
                         <i data-lucide="hash" class="w-3.5 h-3.5"></i> Exequatur: @m.Exequatur
                     </p>
                     <div class="flex items-center justify-between mt-4">
-                        <span class="text-xs text-blue-600 font-medium cursor-default hover:underline">Ver Perfil</span>
-                        <form asp-controller="Admin" asp-action="ToggleMedico" method="post" class="inline">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@m.Id" />
-                            <input type="hidden" name="estaActivo" value="@(!m.EstaActivo)" />
-                            <button type="submit" class="text-xs text-slate-500 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl transition-colors">
-                                @(m.EstaActivo ? "Desactivar" : "Activar")
+                        <button type="button"
+                            onclick="abrirHospitalesMedico(@m.Id, '@m.NombreCompleto.Replace("'", "\\'")')"
+                                class="text-xs text-blue-600 hover:underline font-medium">
+                            Hospitales
+                        </button>
+                        <div class="flex items-center gap-2">
+                                <button type="button"
+                                    onclick="abrirHospitalesMedico(@m.Id, '@m.NombreCompleto.Replace("'", "\\'")')"
+                                    class="text-xs text-slate-500 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl transition-colors">
+                                Editar hospitales
                             </button>
-                        </form>
+                            <form asp-controller="Admin" asp-action="ToggleMedico" method="post" class="inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@m.Id" />
+                                <input type="hidden" name="estaActivo" value="@(!m.EstaActivo)" />
+                                <button type="submit" class="text-xs text-slate-500 border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-xl transition-colors">
+                                    @(m.EstaActivo ? "Desactivar" : "Activar")
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             }
@@ -116,21 +127,70 @@
                                 </span>
                             </td>
                             <td class="px-5 py-3 text-right">
-                                <form asp-controller="Admin" asp-action="ToggleMedico" method="post" class="inline">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@m.Id" />
-                                    <input type="hidden" name="estaActivo" value="@(!m.EstaActivo)" />
-                                    <button type="submit" class="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline">
-                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                        @(m.EstaActivo ? "Desactivar" : "Activar")
+                                <div class="flex items-center justify-end gap-3">
+                                        <button type="button"
+                                            onclick="abrirHospitalesMedico(@m.Id, '@m.NombreCompleto.Replace("'", "\\'")')"
+                                            class="inline-flex items-center gap-1.5 text-xs text-slate-600 hover:underline">
+                                        <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
+                                        Hospitales
                                     </button>
-                                </form>
+                                    <form asp-controller="Admin" asp-action="ToggleMedico" method="post" class="inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@m.Id" />
+                                        <input type="hidden" name="estaActivo" value="@(!m.EstaActivo)" />
+                                        <button type="submit" class="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline">
+                                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                            @(m.EstaActivo ? "Desactivar" : "Activar")
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
         }
+    </div>
+</div>
+
+<!-- Modal: Editar Hospitales del Médico -->
+<div id="modalHospitalesMedico" class="hidden fixed inset-0 bg-black/30 flex items-center justify-center z-50 overflow-y-auto py-6">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg mx-4">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="font-semibold text-slate-800">Hospitales del médico</h3>
+                <p id="hospitales-medico-nombre" class="text-xs text-slate-400 mt-0.5"></p>
+            </div>
+            <button onclick="document.getElementById('modalHospitalesMedico').classList.add('hidden')"
+                    class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <form asp-controller="Admin" asp-action="ActualizarHospitalesMedico" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="medicoId" id="hospitales-medico-id" />
+
+            <div class="border border-slate-100 rounded-xl p-3 max-h-72 overflow-y-auto space-y-2" id="hospitales-medico-checks">
+                @foreach (var h in hospitales)
+                {
+                    <label class="flex items-center gap-2 text-sm text-slate-700">
+                        <input type="checkbox" name="hospitalesIds" value="@h.Id" class="rounded border-slate-300 text-blue-600 focus:ring-blue-400" />
+                        @h.Nombre
+                    </label>
+                }
+            </div>
+
+            <p class="text-xs text-slate-400 mt-3">Selecciona uno o varios hospitales para este médico.</p>
+
+            <div class="flex gap-2 justify-end mt-4">
+                <button type="button" onclick="document.getElementById('modalHospitalesMedico').classList.add('hidden')"
+                        class="px-4 py-2 text-sm text-slate-500 hover:bg-slate-50 rounded-xl">Cancelar</button>
+                <button type="submit" class="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold">
+                    <i data-lucide="save" class="w-4 h-4"></i> Guardar hospitales
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -220,6 +280,26 @@ async function cargarEspecialidadesModal(hospitalId) {
     if (!hospitalId) return;
     const data = await fetch(`/Admin/ObtenerEspecialidades?hospitalId=${hospitalId}`).then(r => r.json());
     sel.innerHTML = '<option value="">Seleccionar...</option>' + data.map(e => `<option value="${e.id}">${e.nombre}</option>`).join('');
+}
+
+async function abrirHospitalesMedico(medicoId, nombreMedico) {
+    document.getElementById('hospitales-medico-id').value = medicoId;
+    document.getElementById('hospitales-medico-nombre').textContent = nombreMedico;
+
+    const checks = document.querySelectorAll('#hospitales-medico-checks input[type="checkbox"]');
+    checks.forEach(c => c.checked = false);
+
+    try {
+        const asignados = await fetch(`/Admin/ObtenerHospitalesAsignadosMedico?medicoId=${medicoId}`).then(r => r.json());
+        const asignadosIds = new Set(asignados.map(h => h.hospitalId));
+        checks.forEach(c => {
+            c.checked = asignadosIds.has(parseInt(c.value));
+        });
+    } catch {
+        // Si falla la carga, deja los checks sin seleccionar.
+    }
+
+    document.getElementById('modalHospitalesMedico').classList.remove('hidden');
 }
 </script>
 }

@@ -34,11 +34,13 @@
                         <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Hospital</th>
                         <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Fecha</th>
                         <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
+                        <th class="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50">
                     @foreach (var cita in citas)
                     {
+                        var cancelable = cita.Estado == "Pendiente" || cita.Estado == "Confirmada";
                         <tr class="hover:bg-slate-50 transition-colors">
                             <td class="px-5 py-3">
                                 <div class="flex items-center gap-3">
@@ -53,6 +55,26 @@
                             <td class="px-5 py-3">
                                 <span class="px-2.5 py-1 rounded-full text-xs font-medium @cita.EstadoBadgeClass">@cita.Estado</span>
                             </td>
+                            <td class="px-5 py-3 text-right">
+                                @if (cancelable)
+                                {
+                                    <div class="flex items-center justify-end gap-2">
+                                        <button onclick="abrirReprogramar(@cita.Id, @cita.MedicoId, @cita.HospitalId, '@cita.FechaHora.ToString("yyyy-MM-ddTHH:mm")')"
+                                                class="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium border border-blue-200 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
+                                            <i data-lucide="calendar-clock" class="w-3.5 h-3.5"></i> Reprogramar
+                                        </button>
+                                        <form asp-controller="Paciente" asp-action="CancelarCita" method="post" class="inline"
+                                              onsubmit="return confirm('¿Estás seguro de que deseas cancelar esta cita?')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="citaId" value="@cita.Id" />
+                                            <button type="submit"
+                                                    class="inline-flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 font-medium border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">
+                                                <i data-lucide="x-circle" class="w-3.5 h-3.5"></i> Cancelar
+                                            </button>
+                                        </form>
+                                    </div>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -60,3 +82,212 @@
         }
     </div>
 </div>
+
+<!-- Modal: Reprogramar cita -->
+<div id="modalReprogramar" class="hidden fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-800">Reprogramar Cita</h3>
+            <button onclick="document.getElementById('modalReprogramar').classList.add('hidden')"
+                    class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <form asp-controller="Paciente" asp-action="ReprogramarCita" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="citaId" id="reprogramar-citaId" />
+            <input type="hidden" name="nuevaFechaHora" id="reprogramar-fechaHoraFinal" />
+            <div class="mb-5">
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Nueva fecha disponible</label>
+                <select id="reprogramar-fecha" required
+                        class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <option value="">Cargando fechas...</option>
+                </select>
+
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 mt-3">Hora disponible</label>
+                <select id="reprogramar-hora" required
+                        class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" disabled>
+                    <option value="">Selecciona una fecha primero</option>
+                </select>
+
+                <p id="reprogramar-ayuda" class="text-xs text-slate-400 mt-1">Solo se muestran horarios en los que el doctor está disponible (mínimo 24 horas).</p>
+            </div>
+            <div class="flex gap-2 justify-end">
+                <button type="button" onclick="document.getElementById('modalReprogramar').classList.add('hidden')"
+                        class="px-4 py-2 text-sm text-slate-500 hover:bg-slate-50 rounded-xl">Cancelar</button>
+                <button type="submit"
+                        class="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold">
+                    <i data-lucide="calendar-clock" class="w-4 h-4"></i> Reprogramar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+let disponibilidadReprogramar = [];
+let fechaMinimaReprogramar = null;
+
+function toDiaSemana(fecha) {
+    return (fecha.getDay() + 6) % 7; // JS: 0=Domingo; sistema: 0=Lunes
+}
+
+function formatearFechaIsoLocal(fecha) {
+    const y = fecha.getFullYear();
+    const m = String(fecha.getMonth() + 1).padStart(2, '0');
+    const d = String(fecha.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function formatearHora(hh, mm) {
+    return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+function generarSlotsDeRango(horaInicio, horaFin) {
+    const [hi, mi] = horaInicio.split(':').map(Number);
+    const [hf, mf] = horaFin.split(':').map(Number);
+    const slots = [];
+    let totalMin = hi * 60 + mi;
+    const totalFin = hf * 60 + mf;
+
+    while (totalMin < totalFin) {
+        const hh = Math.floor(totalMin / 60);
+        const mm = totalMin % 60;
+        slots.push(formatearHora(hh, mm));
+        totalMin += 30;
+    }
+
+    return slots;
+}
+
+function cargarHorasDisponibles(fechaIso, horaPreferida = null) {
+    const horaSelect = document.getElementById('reprogramar-hora');
+    const ayuda = document.getElementById('reprogramar-ayuda');
+    horaSelect.innerHTML = '<option value="">Selecciona una hora...</option>';
+
+    if (!fechaIso) {
+        horaSelect.disabled = true;
+        ayuda.textContent = 'Selecciona una fecha para ver las horas disponibles.';
+        return;
+    }
+
+    const fecha = new Date(`${fechaIso}T00:00:00`);
+    const diaSemana = toDiaSemana(fecha);
+    const rangos = disponibilidadReprogramar.filter(x => x.diaSemana === diaSemana);
+
+    const horas = new Set();
+    for (const rango of rangos) {
+        for (const slot of generarSlotsDeRango(rango.horaInicio, rango.horaFin)) {
+            const dt = new Date(`${fechaIso}T${slot}:00`);
+            if (dt >= fechaMinimaReprogramar) horas.add(slot);
+        }
+    }
+
+    const horasOrdenadas = Array.from(horas).sort();
+    if (!horasOrdenadas.length) {
+        horaSelect.disabled = true;
+        ayuda.textContent = 'No hay horas disponibles para la fecha seleccionada.';
+        return;
+    }
+
+    for (const hora of horasOrdenadas) {
+        const opt = document.createElement('option');
+        opt.value = hora;
+        opt.textContent = hora;
+        if (horaPreferida && hora === horaPreferida) opt.selected = true;
+        horaSelect.appendChild(opt);
+    }
+
+    horaSelect.disabled = false;
+    ayuda.textContent = 'Solo se muestran horarios disponibles del doctor (mínimo 24 horas).';
+    sincronizarFechaHoraFinal();
+}
+
+function sincronizarFechaHoraFinal() {
+    const fecha = document.getElementById('reprogramar-fecha').value;
+    const hora = document.getElementById('reprogramar-hora').value;
+    const hidden = document.getElementById('reprogramar-fechaHoraFinal');
+
+    if (!fecha || !hora) {
+        hidden.value = '';
+        return;
+    }
+
+    hidden.value = `${fecha}T${hora}`;
+}
+
+async function abrirReprogramar(citaId, medicoId, hospitalId, fechaActual) {
+    document.getElementById('reprogramar-citaId').value = citaId;
+    fechaMinimaReprogramar = new Date();
+    fechaMinimaReprogramar.setHours(fechaMinimaReprogramar.getHours() + 24);
+
+    const fechaSelect = document.getElementById('reprogramar-fecha');
+    const horaSelect = document.getElementById('reprogramar-hora');
+    const fechaActualDate = new Date(fechaActual);
+    const fechaActualIso = formatearFechaIsoLocal(fechaActualDate);
+    const horaActual = `${String(fechaActualDate.getHours()).padStart(2, '0')}:${String(fechaActualDate.getMinutes()).padStart(2, '0')}`;
+
+    fechaSelect.innerHTML = '<option value="">Cargando fechas...</option>';
+    horaSelect.innerHTML = '<option value="">Selecciona una fecha primero</option>';
+    horaSelect.disabled = true;
+    document.getElementById('reprogramar-fechaHoraFinal').value = '';
+
+    try {
+        const response = await fetch(`/Paciente/ObtenerDisponibilidad?medicoId=${medicoId}&hospitalId=${hospitalId}`);
+        disponibilidadReprogramar = await response.json();
+    } catch {
+        disponibilidadReprogramar = [];
+    }
+
+    if (!disponibilidadReprogramar.length) {
+        fechaSelect.innerHTML = '<option value="">Sin disponibilidad registrada</option>';
+        document.getElementById('reprogramar-ayuda').textContent = 'El doctor no tiene horarios configurados para reprogramar esta cita.';
+        document.getElementById('modalReprogramar').classList.remove('hidden');
+        return;
+    }
+
+    const fechas = [];
+    for (let i = 0; i < 90; i++) {
+        const f = new Date(fechaMinimaReprogramar);
+        f.setDate(f.getDate() + i);
+        const dia = toDiaSemana(f);
+        const tieneRango = disponibilidadReprogramar.some(x => x.diaSemana === dia);
+        if (tieneRango) fechas.push(new Date(f.getFullYear(), f.getMonth(), f.getDate()));
+    }
+
+    fechaSelect.innerHTML = '<option value="">Selecciona una fecha...</option>';
+    for (const f of fechas) {
+        const iso = formatearFechaIsoLocal(f);
+        const opt = document.createElement('option');
+        opt.value = iso;
+        opt.textContent = f.toLocaleDateString('es-DO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        fechaSelect.appendChild(opt);
+    }
+
+    const hayFechaActual = fechas.some(f => formatearFechaIsoLocal(f) === fechaActualIso);
+    if (hayFechaActual) {
+        fechaSelect.value = fechaActualIso;
+        cargarHorasDisponibles(fechaActualIso, horaActual);
+    }
+
+    document.getElementById('modalReprogramar').classList.remove('hidden');
+}
+
+document.getElementById('reprogramar-fecha').addEventListener('change', function() {
+    cargarHorasDisponibles(this.value);
+});
+
+document.getElementById('reprogramar-hora').addEventListener('change', function() {
+    sincronizarFechaHoraFinal();
+});
+
+document.querySelector('#modalReprogramar form').addEventListener('submit', function(e) {
+    sincronizarFechaHoraFinal();
+    if (!document.getElementById('reprogramar-fechaHoraFinal').value) {
+        e.preventDefault();
+        alert('Selecciona una fecha y hora disponible para reprogramar.');
+    }
+});
+</script>
+}

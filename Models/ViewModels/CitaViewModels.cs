@@ -31,9 +31,9 @@ public class CitaCrearViewModel
 {
     [Required] public DateTime FechaHora { get; set; }
     public string? Notas { get; set; }
-    [Required] public int PacienteId { get; set; }
-    [Required] public int MedicoId { get; set; }
-    [Required] public int HospitalId { get; set; }
+    [Range(1, int.MaxValue, ErrorMessage = "Paciente inválido.")] public int PacienteId { get; set; }
+    [Range(1, int.MaxValue, ErrorMessage = "Médico inválido.")] public int MedicoId { get; set; }
+    [Range(1, int.MaxValue, ErrorMessage = "Hospital inválido.")] public int HospitalId { get; set; }
 }
 
 public class CitaEstadoViewModel

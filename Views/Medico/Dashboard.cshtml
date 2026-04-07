@@ -16,10 +16,16 @@
             <h1 class="text-2xl font-bold text-slate-800">Buenos días, Dr. @nombre</h1>
             <p class="text-slate-500 text-sm mt-1">Tienes @total citas programadas para hoy</p>
         </div>
-        <a href="/Medico/Agenda"
-           class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
-            <i data-lucide="plus" class="w-4 h-4"></i> Ver Agenda
-        </a>
+        <div class="flex items-center gap-2">
+            <a href="/Medico/Agenda"
+               class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
+                <i data-lucide="plus" class="w-4 h-4"></i> Ver Agenda
+            </a>
+            <a href="/Medico/CompletarCitas"
+               class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
+                <i data-lucide="check-square" class="w-4 h-4"></i> Completar Citas
+            </a>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">

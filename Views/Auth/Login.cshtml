@@ -40,6 +40,12 @@
         <h2 class="text-xl font-semibold text-slate-800 mb-1">Bienvenido de nuevo</h2>
         <p class="text-sm text-slate-500 mb-6">Ingrese para continuar con su jornada.</p>
 
+        @if (TempData["Success"] is string ok)
+        {
+            <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 flex items-center gap-2">
+                <i data-lucide="check-circle-2" class="w-4 h-4 flex-shrink-0"></i> @ok
+            </div>
+        }
         @if (TempData["Error"] is string err)
         {
             <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2">
@@ -92,7 +98,7 @@
                     <input type="checkbox" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-400" />
                     Recuérdame
                 </label>
-                <span class="text-sm text-blue-600 font-medium cursor-default">¿Olvidó su contraseña?</span>
+                <a href="/Auth/RecuperarContrasena" class="text-sm text-blue-600 font-medium hover:underline">¿Olvidó su contraseña?</a>
             </div>
 
             <div asp-validation-summary="ModelOnly" class="mb-4 text-sm text-red-600"></div>
@@ -105,7 +111,7 @@
         </form>
 
         <p class="text-center text-xs text-slate-400 mt-6">
-            ¿Nuevo en MedSync? <span class="text-blue-600 font-medium cursor-default">Regístrate</span>
+            ¿Nuevo paciente? <a href="/Auth/Registro" class="text-blue-600 font-medium hover:underline">Crea tu cuenta aquí</a>
         </p>
     </div>
 </div>

@@ -39,19 +39,34 @@
         <!-- Brand -->
         <div class="px-5 py-4 border-b border-slate-100">
             <div class="flex items-center gap-2.5">
-                <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-sm">
-                    <i data-lucide="cross" class="w-4 h-4"></i>
+                <div class="w-8 h-8 @(role == "SuperAdmin" ? "bg-indigo-600" : "bg-blue-600") rounded-lg flex items-center justify-center text-white shadow-sm">
+                    <i data-lucide="@(role == "SuperAdmin" ? "shield" : "cross")" class="w-4 h-4"></i>
                 </div>
                 <div>
-                    <div class="font-bold text-blue-700 text-sm leading-tight">MedSync</div>
-                    <div class="text-xs text-slate-400 leading-tight">Tu salud conectada</div>
+                    <div class="font-bold @(role == "SuperAdmin" ? "text-indigo-700" : "text-blue-700") text-sm leading-tight">MedSync</div>
+                    <div class="text-xs text-slate-400 leading-tight">@(role == "SuperAdmin" ? "Sistema Global" : "Tu salud conectada")</div>
                 </div>
             </div>
         </div>
 
         <!-- Nav -->
         <nav class="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-            @if (role == "Paciente")
+            @if (role == "SuperAdmin")
+            {
+                <a href="/SuperAdmin/Dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors @(currentController=="SuperAdmin" && currentAction=="Dashboard" ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800")">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 flex-shrink-0"></i> Panel
+                </a>
+                <a href="/SuperAdmin/Administradores" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors @(currentAction=="Administradores" ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800")">
+                    <i data-lucide="user-cog" class="w-4 h-4 flex-shrink-0"></i> Administradores
+                </a>
+                <a href="/SuperAdmin/Hospitales" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors @(currentAction=="Hospitales" ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800")">
+                    <i data-lucide="building-2" class="w-4 h-4 flex-shrink-0"></i> Hospitales
+                </a>
+                <a href="/SuperAdmin/Usuarios" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors @(currentAction=="Usuarios" ? "bg-indigo-50 text-indigo-700 font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800")">
+                    <i data-lucide="users" class="w-4 h-4 flex-shrink-0"></i> Usuarios
+                </a>
+            }
+            else if (role == "Paciente")
             {
                 <a href="/Paciente/Dashboard" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors @(currentController=="Paciente" && currentAction=="Dashboard" ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800")">
                     <i data-lucide="layout-dashboard" class="w-4 h-4 flex-shrink-0"></i> Dashboard
@@ -62,6 +77,9 @@
                 <a href="/Paciente/Historial" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors @(currentAction=="Historial" ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800")">
                     <i data-lucide="clock" class="w-4 h-4 flex-shrink-0"></i> Historial
                 </a>
+                <a href="/Paciente/Expediente" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors @(currentAction=="Expediente" ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800")">
+                    <i data-lucide="folder-open" class="w-4 h-4 flex-shrink-0"></i> Mi Expediente
+                </a>
             }
             else if (role == "Doctor")
             {
@@ -71,8 +89,14 @@
                 <a href="/Medico/Agenda" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors @(currentAction=="Agenda" ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800")">
                     <i data-lucide="calendar" class="w-4 h-4 flex-shrink-0"></i> Citas
                 </a>
+                <a href="/Medico/Disponibilidad" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors @(currentAction=="Disponibilidad" ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800")">
+                    <i data-lucide="calendar-clock" class="w-4 h-4 flex-shrink-0"></i> Disponibilidad
+                </a>
                 <a href="/Medico/Historial" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors @(currentAction=="Historial" ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800")">
                     <i data-lucide="clock" class="w-4 h-4 flex-shrink-0"></i> Historial
+                </a>
+                <a href="/Medico/CompletarCitas" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors @(currentAction=="CompletarCitas" ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800")">
+                    <i data-lucide="check-square" class="w-4 h-4 flex-shrink-0"></i> Completar Citas
                 </a>
             }
             else if (role == "Administrador")
@@ -85,6 +109,12 @@
                 </a>
                 <a href="/Admin/Pagos" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors @(currentAction=="Pagos" ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800")">
                     <i data-lucide="credit-card" class="w-4 h-4 flex-shrink-0"></i> Pagos
+                </a>
+                <a href="/Admin/Cobros" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors @(currentAction=="Cobros" ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800")">
+                    <i data-lucide="receipt" class="w-4 h-4 flex-shrink-0"></i> Cobros
+                </a>
+                <a href="/Admin/EstadoCuenta" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors @(currentAction=="EstadoCuenta" ? "bg-blue-50 text-blue-700 font-semibold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-800")">
+                    <i data-lucide="wallet" class="w-4 h-4 flex-shrink-0"></i> Estado de Cuenta
                 </a>
 
                 <div class="pt-4 pb-1 px-3 text-xs text-slate-400 uppercase tracking-wider font-semibold">Administración</div>
@@ -124,15 +154,17 @@
                     <i data-lucide="help-circle" class="w-4 h-4"></i>
                 </button>
                 <div class="w-px h-5 bg-slate-200 mx-1"></div>
-                <div class="flex items-center gap-2.5">
+                <a href="/Perfil/Index" class="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
                     <div class="text-right">
                         <div class="text-sm font-semibold text-slate-700 leading-tight">@userName</div>
-                        <div class="text-xs text-slate-400 leading-tight">@role</div>
+                        <div class="text-xs leading-tight @(role == "SuperAdmin" ? "text-indigo-500 font-semibold" : "text-slate-400")">
+                            @(role == "SuperAdmin" ? "SUPER ADMIN" : role)
+                        </div>
                     </div>
-                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold shadow-sm">
+                    <div class="w-8 h-8 rounded-full @(role == "SuperAdmin" ? "bg-indigo-600" : "bg-blue-600") text-white text-xs flex items-center justify-center font-bold shadow-sm">
                         @(userName.Length > 0 ? userName[0].ToString().ToUpper() : "U")
                     </div>
-                </div>
+                </a>
             </div>
         </header>
 

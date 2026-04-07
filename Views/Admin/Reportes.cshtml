@@ -2,7 +2,7 @@
 @{
     ViewData["Title"] = "Reportes de Ingresos";
     var hospitales = ViewBag.Hospitales as List<HospitalViewModel> ?? [];
-    var reporte = ViewBag.Reporte;
+    var reporte = ViewBag.Reporte as ReporteIngresosViewModel;
     var selectedHospital = ViewBag.SelectedHospital as int?;
     var desde = ViewBag.Desde as string;
     var hasta = ViewBag.Hasta as string;
@@ -23,7 +23,14 @@
                     <option value="">Seleccionar...</option>
                     @foreach (var h in hospitales)
                     {
-                        <option value="@h.Id" selected="@(selectedHospital == h.Id)">@h.Nombre</option>
+                        if (selectedHospital == h.Id)
+                        {
+                            <option value="@h.Id" selected>@h.Nombre</option>
+                        }
+                        else
+                        {
+                            <option value="@h.Id">@h.Nombre</option>
+                        }
                     }
                 </select>
             </div>
@@ -44,18 +51,101 @@
         </form>
     </div>
 
-    <!-- Report results -->
     @if (reporte != null)
     {
-        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <h3 class="font-semibold text-slate-800 mb-4">Resultados del Reporte</h3>
-            <pre class="bg-slate-50 rounded-xl p-4 text-sm text-slate-700 overflow-x-auto">@System.Text.Json.JsonSerializer.Serialize(reporte, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })</pre>
+        <!-- Summary cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-600 mb-3">
+                    <i data-lucide="dollar-sign" class="w-5 h-5"></i>
+                </div>
+                <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Ingresos</p>
+                <p class="text-2xl font-bold text-slate-800 mt-1">$@reporte.TotalIngresos.ToString("N2")</p>
+                <p class="text-xs text-slate-400 mt-1">Período: @desde → @hasta</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 mb-3">
+                    <i data-lucide="calendar-check" class="w-5 h-5"></i>
+                </div>
+                <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Citas Completadas</p>
+                <p class="text-2xl font-bold text-slate-800 mt-1">@reporte.CitasCompletadas</p>
+                <p class="text-xs text-slate-400 mt-1">De @reporte.TotalCitas citas totales</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                <div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 mb-3">
+                    <i data-lucide="trending-up" class="w-5 h-5"></i>
+                </div>
+                <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Promedio por Cita</p>
+                <p class="text-2xl font-bold text-slate-800 mt-1">$@reporte.PromedioPorCita.ToString("N2")</p>
+                <p class="text-xs text-slate-400 mt-1">Ingreso promedio</p>
+            </div>
         </div>
+
+        <!-- Payments table -->
+        @if (reporte.Pagos.Any())
+        {
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                    <h3 class="font-semibold text-slate-800">Detalle de Pagos</h3>
+                    <span class="text-sm text-slate-400">@reporte.Pagos.Count pagos</span>
+                </div>
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cita ID</th>
+                            <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Fecha</th>
+                            <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Método</th>
+                            <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
+                            <th class="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        @foreach (var p in reporte.Pagos)
+                        {
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-5 py-3 text-slate-500">#@p.CitaId</td>
+                                <td class="px-5 py-3 text-slate-600">@p.FechaPago.ToString("dd/MM/yyyy")</td>
+                                <td class="px-5 py-3 text-slate-500">@p.MetodoPago</td>
+                                <td class="px-5 py-3">
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold @(p.Estado == "Completado" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700")">
+                                        @p.Estado
+                                    </span>
+                                </td>
+                                <td class="px-5 py-3 text-right font-semibold text-slate-800">$@p.Monto.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="bg-slate-50 border-t border-slate-100">
+                        <tr>
+                            <td colspan="4" class="px-5 py-3 text-sm font-semibold text-slate-600">Total</td>
+                            <td class="px-5 py-3 text-right font-bold text-slate-800">$@reporte.TotalIngresos.ToString("N2")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 text-center">
+                <p class="text-slate-400 text-sm">No hay pagos registrados en este período.</p>
+            </div>
+        }
     }
     else if (selectedHospital.HasValue)
     {
-        <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-sm text-yellow-700">
-            No se encontraron datos para el rango seleccionado.
+        <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-sm text-yellow-700 flex items-center gap-2">
+            <i data-lucide="info" class="w-4 h-4 flex-shrink-0"></i>
+            No se encontraron datos para el rango seleccionado o el endpoint no está disponible.
+        </div>
+    }
+    else
+    {
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center">
+            <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <i data-lucide="bar-chart-3" class="w-7 h-7 text-blue-300"></i>
+            </div>
+            <p class="text-slate-500 font-medium">Selecciona un hospital y rango de fechas</p>
+            <p class="text-xs text-slate-400 mt-1">para generar tu reporte de ingresos.</p>
         </div>
     }
 </div>

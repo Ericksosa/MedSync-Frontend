@@ -58,7 +58,6 @@ public class AuthController : BaseController
     /// <summary>
     /// Cierra la sesión del usuario y redirige al login.
     /// </summary>
-    /// <returns>Redirección a la vista de login.</returns>
     [HttpGet]
     public IActionResult Logout()
     {
@@ -66,9 +65,63 @@ public class AuthController : BaseController
         return RedirectToAction("Login");
     }
 
+    /// <summary>
+    /// Muestra el formulario de auto-registro para pacientes.
+    /// </summary>
+    [HttpGet]
+    public IActionResult Registro()
+    {
+        if (Auth.IsAuthenticated()) return RedirectByRole();
+        return View(new PacienteRegistroViewModel());
+    }
+
+    /// <summary>
+    /// Procesa el registro de un nuevo paciente.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Registro(PacienteRegistroViewModel model)
+    {
+        if (!ModelState.IsValid) return View(model);
+
+        // Registro unificado: cuenta + perfil de paciente
+        var authResult = await Api.PostAsync<TokenRespuestaViewModel>("/api/auth/registro-paciente", new
+        {
+            email = model.Email,
+            contrasena = model.Contrasena,
+            nombre = model.Nombre,
+            apellido = model.Apellido,
+            rol = "Paciente",
+            documentoId = model.DocumentoId,
+            telefono = model.Telefono,
+            fechaNacimiento = model.FechaNacimiento
+        });
+
+        if (!authResult.Success)
+        {
+            ModelState.AddModelError("", authResult.Error ?? "Error al crear la cuenta. El email puede estar en uso.");
+            return View(model);
+        }
+
+        Auth.StoreToken(authResult.Data!.Token, authResult.Data.Email, authResult.Data.Rol);
+
+        TempData["Success"] = "Cuenta creada exitosamente. Bienvenido a MedSync.";
+        return RedirectToAction("Dashboard", "Paciente");
+    }
+
+    /// <summary>
+    /// Muestra la pantalla de recuperación de contraseña.
+    /// </summary>
+    [HttpGet]
+    public IActionResult RecuperarContrasena()
+    {
+        return View();
+    }
+
     // Método privado para redirigir según el rol del usuario autenticado
     private IActionResult RedirectByRole() => Auth.GetUserRole() switch
     {
+        "SuperAdmin"    => RedirectToAction("Dashboard", "SuperAdmin"),
         "Administrador" => RedirectToAction("Dashboard", "Admin"),
         "Doctor"        => RedirectToAction("Dashboard", "Medico"),
         "Paciente"      => RedirectToAction("Dashboard", "Paciente"),

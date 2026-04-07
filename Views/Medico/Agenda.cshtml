@@ -2,12 +2,35 @@
     ViewData["Title"] = "Agenda Semanal";
     var medicoId = ViewBag.MedicoId;
     var nombreDoctor = ViewBag.NombreDoctor as string ?? "Doctor";
+    var hospitalesAsignados = ViewBag.HospitalesAsignados as List<HospitalAsignadoViewModel> ?? [];
+    var hospitalIdSeleccionado = ViewBag.HospitalIdSeleccionado as int?;
 }
 
 <div class="max-w-5xl mx-auto">
     <div class="mb-6">
         <p class="text-xs text-blue-600 font-semibold uppercase tracking-wider">Agenda Semanal</p>
         <h1 class="text-2xl font-bold text-slate-800">Dr. @nombreDoctor</h1>
+
+        @if (hospitalesAsignados.Any())
+        {
+            <div class="mt-4 max-w-sm">
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Filtrar por hospital</label>
+                <select id="hospitalFilter" class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <option value="">Todos los hospitales</option>
+                    @foreach (var hospital in hospitalesAsignados)
+                    {
+                        if (hospitalIdSeleccionado == hospital.HospitalId)
+                        {
+                            <option value="@hospital.HospitalId" selected>@hospital.NombreHospital</option>
+                        }
+                        else
+                        {
+                            <option value="@hospital.HospitalId">@hospital.NombreHospital</option>
+                        }
+                    }
+                </select>
+            </div>
+        }
     </div>
 
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
@@ -44,6 +67,16 @@
 @section Scripts {
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    let agendaRequestId = 0;
+    const hospitalFilterEl = document.getElementById('hospitalFilter');
+
+    function formatearFechaLocal(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
     const calendarEl = document.getElementById('calendar');
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'timeGridWeek',
@@ -58,9 +91,33 @@ document.addEventListener('DOMContentLoaded', function () {
         slotMaxTime: '20:00:00',
         buttonText: { today: 'Hoy', week: 'Semana', day: 'Día' },
         events: async function (info, success, failure) {
-            const fecha = info.startStr.substring(0, 10);
-            const data = await fetch(`/Medico/ObtenerAgenda?fecha=${fecha}`).then(r => r.json());
-            success(data);
+            const currentRequestId = ++agendaRequestId;
+
+            try {
+                const fechas = [];
+                const cursor = new Date(info.start);
+                while (cursor < info.end) {
+                    fechas.push(formatearFechaLocal(cursor));
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+
+                const responses = await Promise.all(
+                    fechas.map(fecha => fetch(`/Medico/ObtenerAgenda?fecha=${fecha}`).then(r => r.json()))
+                );
+
+                // Ignora respuestas viejas cuando el usuario navega rápido en el calendario.
+                if (currentRequestId != agendaRequestId) return;
+
+                const hospitalFiltro = hospitalFilterEl?.value;
+                let eventos = responses.flat();
+                if (hospitalFiltro) {
+                    eventos = eventos.filter(e => String(e.extendedProps?.hospitalId) === String(hospitalFiltro));
+                }
+
+                success(eventos);
+            } catch (e) {
+                if (currentRequestId == agendaRequestId) failure(e);
+            }
         },
         eventColor: '#3b82f6',
         eventClick: function (info) {
@@ -82,6 +139,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
     calendar.render();
+
+    if (hospitalFilterEl) {
+        hospitalFilterEl.addEventListener('change', function () {
+            calendar.refetchEvents();
+        });
+    }
 });
 </script>
 }

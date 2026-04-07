@@ -1,0 +1,176 @@
+@using MedSync_Frontend.Models.ViewModels
+@{
+    ViewData["Title"] = "Estado de Cuenta";
+    var hospitales = ViewBag.Hospitales as List<HospitalViewModel> ?? [];
+    var balances = ViewBag.Balances as List<BalanceMedicoViewModel>;
+    var selectedHospital = ViewBag.SelectedHospital as int?;
+    var selectedHospitalNombre = hospitales.FirstOrDefault(h => h.Id == selectedHospital)?.Nombre ?? "";
+    var totalGenerado = balances?.Sum(b => b.TotalGenerado) ?? 0;
+    var totalCobrado = balances?.Sum(b => b.TotalCobrado) ?? 0;
+    var totalPagado = balances?.Sum(b => b.TotalPagado) ?? 0;
+    var totalPendiente = balances?.Sum(b => b.Pendiente) ?? 0;
+}
+
+<div class="max-w-5xl mx-auto space-y-6">
+
+    <div>
+        <h1 class="text-2xl font-bold text-slate-800">Estado de Cuenta</h1>
+        <p class="text-slate-500 text-sm mt-1">Balance financiero por médico — cobros emitidos vs. pagos recibidos.</p>
+    </div>
+
+    <!-- Filtro por hospital -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+        <form method="get" asp-controller="Admin" asp-action="EstadoCuenta" class="flex items-end gap-4">
+            <div class="flex-1">
+                <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Hospital</label>
+                <select name="hospitalId" required
+                        class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <option value="">Seleccionar hospital...</option>
+                    @foreach (var h in hospitales)
+                    {
+                        if (h.Id == selectedHospital)
+                        {
+                            <option value="@h.Id" selected>@h.Nombre</option>
+                        }
+                        else
+                        {
+                            <option value="@h.Id">@h.Nombre</option>
+                        }
+                    }
+                </select>
+            </div>
+            <button type="submit"
+                    class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
+                <i data-lucide="search" class="w-4 h-4"></i> Ver Balance
+            </button>
+        </form>
+    </div>
+
+    @if (balances != null)
+    {
+        <!-- Summary cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                <div class="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 mb-3">
+                    <i data-lucide="trending-up" class="w-4 h-4"></i>
+                </div>
+                <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Generado</p>
+                <p class="text-xl font-bold text-slate-800 mt-1">$@totalGenerado.ToString("N2")</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                <div class="w-9 h-9 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 mb-3">
+                    <i data-lucide="receipt" class="w-4 h-4"></i>
+                </div>
+                <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Cobros Emitidos</p>
+                <p class="text-xl font-bold text-slate-800 mt-1">$@totalCobrado.ToString("N2")</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                <div class="w-9 h-9 bg-green-50 rounded-xl flex items-center justify-center text-green-600 mb-3">
+                    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                </div>
+                <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Pagado</p>
+                <p class="text-xl font-bold text-slate-800 mt-1">$@totalPagado.ToString("N2")</p>
+            </div>
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+                <div class="w-9 h-9 bg-yellow-50 rounded-xl flex items-center justify-center text-yellow-600 mb-3">
+                    <i data-lucide="clock" class="w-4 h-4"></i>
+                </div>
+                <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Pendiente</p>
+                <p class="text-xl font-bold text-slate-800 mt-1">$@totalPendiente.ToString("N2")</p>
+            </div>
+        </div>
+
+        <!-- Balance table -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                <div>
+                    <h3 class="font-semibold text-slate-800">Balance por Médico</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">@selectedHospitalNombre — @balances.Count médico(s)</p>
+                </div>
+                <a href="/Admin/Cobros" class="text-xs text-blue-600 hover:underline font-medium">Ver cobros →</a>
+            </div>
+
+            @if (!balances.Any())
+            {
+                <div class="text-center py-12 text-slate-400">
+                    <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                        <i data-lucide="users" class="w-6 h-6 text-slate-300"></i>
+                    </div>
+                    <p class="text-sm">No hay médicos en este hospital.</p>
+                </div>
+            }
+            else
+            {
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Médico</th>
+                            <th class="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Generado</th>
+                            <th class="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Cobros Emitidos</th>
+                            <th class="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Pagado</th>
+                            <th class="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Pendiente</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        @foreach (var b in balances)
+                        {
+                            <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-5 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
+                                            <i data-lucide="stethoscope" class="w-4 h-4"></i>
+                                        </div>
+                                        <span class="font-medium text-slate-700">@b.NombreMedico</span>
+                                    </div>
+                                </td>
+                                <td class="px-5 py-3 text-right text-slate-600">$@b.TotalGenerado.ToString("N2")</td>
+                                <td class="px-5 py-3 text-right text-slate-600">$@b.TotalCobrado.ToString("N2")</td>
+                                <td class="px-5 py-3 text-right text-green-700 font-medium">$@b.TotalPagado.ToString("N2")</td>
+                                <td class="px-5 py-3 text-right">
+                                    @if (b.Pendiente > 0)
+                                    {
+                                        <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
+                                            $@b.Pendiente.ToString("N2")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="inline-block px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">Al día</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="bg-slate-50 border-t border-slate-200">
+                        <tr>
+                            <td class="px-5 py-3 text-xs font-semibold text-slate-500 uppercase">Total</td>
+                            <td class="px-5 py-3 text-right font-semibold text-slate-800">$@totalGenerado.ToString("N2")</td>
+                            <td class="px-5 py-3 text-right font-semibold text-slate-800">$@totalCobrado.ToString("N2")</td>
+                            <td class="px-5 py-3 text-right font-semibold text-green-700">$@totalPagado.ToString("N2")</td>
+                            <td class="px-5 py-3 text-right font-semibold text-yellow-700">$@totalPendiente.ToString("N2")</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            }
+        </div>
+    }
+    else if (!hospitales.Any())
+    {
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center text-slate-400">
+            <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <i data-lucide="building-2" class="w-6 h-6 text-slate-300"></i>
+            </div>
+            <p class="text-sm">No hay hospitales disponibles.</p>
+        </div>
+    }
+    else
+    {
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-10 text-center text-slate-400">
+            <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <i data-lucide="wallet" class="w-6 h-6 text-slate-300"></i>
+            </div>
+            <p class="text-sm">Selecciona un hospital para ver el estado de cuenta de sus médicos.</p>
+        </div>
+    }
+
+</div>

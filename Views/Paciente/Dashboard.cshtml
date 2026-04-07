@@ -4,6 +4,7 @@
     var paciente = ViewBag.Paciente as PacienteViewModel;
     var proximaCita = ViewBag.ProximaCita as CitaViewModel;
     var recientes = ViewBag.Recientes as List<CitaViewModel> ?? [];
+    var expediente = ViewBag.Expediente as ExpedienteViewModel;
     var nombre = paciente?.Nombre ?? ViewBag.NombrePaciente as string ?? "Paciente";
 }
 
@@ -80,7 +81,7 @@
                 <h3 class="font-bold text-lg">Expediente Médico</h3>
                 <p class="text-blue-100 text-sm mt-1">Todos tus resultados, recetas y notas de evolución siempre a mano.</p>
             </div>
-            <a href="/Paciente/Historial"
+            <a href="/Paciente/Expediente"
                class="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-white border border-white/30 px-4 py-2 rounded-xl hover:bg-white/10 transition-colors w-fit">
                 Acceder ahora <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </a>
@@ -123,7 +124,7 @@
             }
         </div>
 
-        <!-- Signos vitales (static UI) -->
+        <!-- Signos vitales (último registro) -->
         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <h3 class="font-semibold text-slate-800 mb-4">Signos Vitales</h3>
             <div class="space-y-4">
@@ -132,10 +133,10 @@
                         <span class="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                             <i data-lucide="heart" class="w-3.5 h-3.5 text-red-500"></i> Ritmo Cardíaco
                         </span>
-                        <span class="text-sm font-bold text-slate-800">— <span class="text-xs font-normal text-slate-400">BPM</span></span>
+                        <span class="text-sm font-bold text-slate-800">@(expediente?.RitmoCardiaco?.ToString() ?? "—") <span class="text-xs font-normal text-slate-400">BPM</span></span>
                     </div>
                     <div class="w-full h-1.5 bg-slate-100 rounded-full">
-                        <div class="h-1.5 bg-red-400 rounded-full w-3/4"></div>
+                        <div class="h-1.5 bg-red-400 rounded-full @(expediente?.RitmoCardiaco is int ? "w-3/4" : "w-0")"></div>
                     </div>
                 </div>
                 <div>
@@ -143,10 +144,10 @@
                         <span class="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                             <i data-lucide="thermometer" class="w-3.5 h-3.5 text-orange-500"></i> Temperatura
                         </span>
-                        <span class="text-sm font-bold text-slate-800">— <span class="text-xs font-normal text-slate-400">°C</span></span>
+                        <span class="text-sm font-bold text-slate-800">@(expediente?.Temperatura?.ToString("0.0") ?? "—") <span class="text-xs font-normal text-slate-400">°C</span></span>
                     </div>
                     <div class="w-full h-1.5 bg-slate-100 rounded-full">
-                        <div class="h-1.5 bg-orange-400 rounded-full w-1/2"></div>
+                        <div class="h-1.5 bg-orange-400 rounded-full @(expediente?.Temperatura is decimal ? "w-1/2" : "w-0")"></div>
                     </div>
                 </div>
                 <div>
@@ -154,14 +155,27 @@
                         <span class="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
                             <i data-lucide="activity" class="w-3.5 h-3.5 text-blue-500"></i> Presión Arterial
                         </span>
-                        <span class="text-sm font-bold text-slate-800">—/—</span>
+                        <span class="text-sm font-bold text-slate-800">@(string.IsNullOrWhiteSpace(expediente?.PresionArterial) ? "—/—" : expediente!.PresionArterial)</span>
                     </div>
                     <div class="w-full h-1.5 bg-slate-100 rounded-full">
-                        <div class="h-1.5 bg-blue-400 rounded-full w-2/3"></div>
+                        <div class="h-1.5 bg-blue-400 rounded-full @(string.IsNullOrWhiteSpace(expediente?.PresionArterial) ? "w-0" : "w-2/3")"></div>
                     </div>
                 </div>
             </div>
-            <p class="text-xs text-slate-400 mt-4 text-center">Sin datos sincronizados</p>
+            <p class="text-xs text-slate-400 mt-4 text-center">
+                @if (expediente?.FechaHoraUltimaActualizacionSignos is DateTime fechaSignos)
+                {
+                    @($"Última actualización: {fechaSignos.ToLocalTime():dd/MM/yyyy hh:mm tt}")
+                }
+                else if (expediente?.RitmoCardiaco is null && expediente?.Temperatura is null && string.IsNullOrWhiteSpace(expediente?.PresionArterial))
+                {
+                    @("Sin datos de signos vitales")
+                }
+                else
+                {
+                    @("Último registro disponible")
+                }
+            </p>
         </div>
     </div>
 </div>

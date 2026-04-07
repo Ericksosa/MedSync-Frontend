@@ -32,7 +32,7 @@ public class PacienteController : BaseController
         var userId = Auth.GetUserId()!;
 
         // Obtiene el registro del paciente por email para obtener el ID
-        var emailResult = await Api.GetAsync<PacienteViewModel>($"/api/patients/documento/{Uri.EscapeDataString(Auth.GetUserEmail()!)}");
+        var emailResult = await Api.GetAsync<PacienteViewModel>($"/api/patients/email/{Uri.EscapeDataString(Auth.GetUserEmail()!)}");
         if (!emailResult.Success)
         {
             // Si no se puede obtener el paciente, muestra la vista vacía
@@ -44,8 +44,10 @@ public class PacienteController : BaseController
         var paciente = emailResult.Data!;
         var citasResult = await Api.GetAsync<List<CitaViewModel>>($"/api/appointments/paciente/{paciente.Id}");
         var citas = citasResult.Data ?? [];
+        var expedienteResult = await Api.GetAsync<ExpedienteViewModel>("/api/medicalrecords/me");
 
         ViewBag.Paciente = paciente;
+        ViewBag.Expediente = expedienteResult.Success ? expedienteResult.Data : null;
         ViewBag.Citas = citas;
         ViewBag.ProximaCita = citas
             .Where(c => c.FechaHora > DateTime.Now && c.Estado != "Cancelada")
@@ -69,7 +71,7 @@ public class PacienteController : BaseController
         ViewBag.Hospitales = hospitalesResult.Data ?? [];
 
         // Obtiene información del paciente para prellenar el formulario
-        var emailResult = await Api.GetAsync<PacienteViewModel>($"/api/patients/documento/{Uri.EscapeDataString(Auth.GetUserEmail()!)}");
+        var emailResult = await Api.GetAsync<PacienteViewModel>($"/api/patients/email/{Uri.EscapeDataString(Auth.GetUserEmail()!)}");
         ViewBag.Paciente = emailResult.Data;
 
         return View();
@@ -89,6 +91,23 @@ public class PacienteController : BaseController
             return View(model);
         }
 
+        if (model.PacienteId <= 0)
+        {
+            var email = Auth.GetUserEmail();
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                var pacienteResult = await Api.GetAsync<PacienteViewModel>($"/api/patients/email/{Uri.EscapeDataString(email)}");
+                if (pacienteResult.Success && pacienteResult.Data is not null)
+                    model.PacienteId = pacienteResult.Data.Id;
+            }
+        }
+
+        if (model.PacienteId <= 0)
+        {
+            SetError("No se pudo identificar tu perfil de paciente. Contacta al administrador.");
+            return RedirectToAction("ReservarCita");
+        }
+
         var result = await Api.PostAsync<CitaViewModel>("/api/appointments", model);
         if (!result.Success)
         {
@@ -105,7 +124,7 @@ public class PacienteController : BaseController
     {
         var check = CheckAccess(); if (check != null) return check;
 
-        var emailResult = await Api.GetAsync<PacienteViewModel>($"/api/patients/documento/{Uri.EscapeDataString(Auth.GetUserEmail()!)}");
+        var emailResult = await Api.GetAsync<PacienteViewModel>($"/api/patients/email/{Uri.EscapeDataString(Auth.GetUserEmail()!)}");
         if (!emailResult.Success)
         {
             ViewBag.Citas = new List<CitaViewModel>();
@@ -116,6 +135,56 @@ public class PacienteController : BaseController
         ViewBag.Citas = citasResult.Data?.OrderByDescending(c => c.FechaHora).ToList() ?? [];
 
         return View();
+    }
+
+    // GET /Paciente/Expediente
+    [HttpGet]
+    public async Task<IActionResult> Expediente()
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        var pacienteResult = await Api.GetAsync<PacienteViewModel>($"/api/patients/email/{Uri.EscapeDataString(Auth.GetUserEmail()!)}");
+        var expedienteResult = await Api.GetAsync<ExpedienteViewModel>("/api/medicalrecords/me");
+
+        if (!expedienteResult.Success)
+        {
+            SetError(expedienteResult.Error ?? "No se pudo cargar tu expediente médico.");
+            ViewBag.Paciente = pacienteResult.Data;
+            ViewBag.Expediente = null;
+            return View();
+        }
+
+        ViewBag.Paciente = pacienteResult.Data;
+        ViewBag.Expediente = expedienteResult.Data;
+        return View();
+    }
+
+    // POST /Paciente/ReprogramarCita
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ReprogramarCita(int citaId, DateTime nuevaFechaHora)
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        var result = await Api.PatchAsync<object>($"/api/appointments/{citaId}", new { fechaHora = nuevaFechaHora });
+        if (!result.Success) SetError(result.Error ?? "Error al reprogramar la cita. Verifique que el endpoint esté disponible.");
+        else SetSuccess("Cita reprogramada correctamente.");
+
+        return RedirectToAction("Historial");
+    }
+
+    // POST /Paciente/CancelarCita
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CancelarCita(int citaId)
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        var result = await Api.PatchAsync<object>($"/api/appointments/{citaId}/estado", new CitaEstadoViewModel { Estado = "Cancelada" });
+        if (!result.Success) SetError(result.Error ?? "Error al cancelar la cita.");
+        else SetSuccess("Cita cancelada correctamente.");
+
+        return RedirectToAction("Historial");
     }
 
     // AJAX: GET /Paciente/ObtenerEspecialidades?hospitalId=1
@@ -136,12 +205,13 @@ public class PacienteController : BaseController
         return Json(result.Data ?? []);
     }
 
-    // AJAX: GET /Paciente/ObtenerDisponibilidad?medicoId=1
+    // AJAX: GET /Paciente/ObtenerDisponibilidad?medicoId=1&hospitalId=2
     [HttpGet]
-    public async Task<IActionResult> ObtenerDisponibilidad(int medicoId)
+    public async Task<IActionResult> ObtenerDisponibilidad(int medicoId, int? hospitalId)
     {
         if (!Auth.IsAuthenticated()) return Unauthorized();
-        var result = await Api.GetAsync<List<DisponibilidadViewModel>>($"/api/doctors/{medicoId}/disponibilidad");
+        var query = hospitalId.HasValue ? $"?hospitalId={hospitalId.Value}" : string.Empty;
+        var result = await Api.GetAsync<List<DisponibilidadViewModel>>($"/api/doctors/{medicoId}/disponibilidad{query}");
         return Json(result.Data ?? []);
     }
 }

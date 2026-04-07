@@ -1,0 +1,95 @@
+@using MedSync_Frontend.Models.ViewModels
+@{
+    ViewData["Title"] = "Mi Expediente Médico";
+    var expediente = ViewBag.Expediente as ExpedienteViewModel;
+    var paciente = ViewBag.Paciente as PacienteViewModel;
+}
+
+<div class="max-w-4xl mx-auto space-y-6">
+    <div class="mb-1">
+        <h1 class="text-2xl font-bold text-slate-800">Mi Expediente Médico</h1>
+        <p class="text-slate-500 text-sm mt-1">Aquí puedes ver los diagnósticos, recetas y signos vitales registrados por tus doctores.</p>
+    </div>
+
+    @if (expediente is null)
+    {
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 text-center text-slate-500">
+            No se encontró tu expediente médico.
+        </div>
+    }
+    else
+    {
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <h2 class="font-semibold text-slate-800 mb-4">Signos Vitales</h2>
+            <p class="text-xs text-slate-400 mb-3">
+                @(expediente.FechaHoraUltimaActualizacionSignos is DateTime fechaSignos
+                    ? $"Última actualización: {fechaSignos.ToLocalTime():dd/MM/yyyy hh:mm tt}"
+                    : "Sin fecha de actualización disponible")
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div class="rounded-xl border border-slate-100 p-4">
+                    <div class="text-slate-500">Ritmo cardiaco</div>
+                    <div class="text-xl font-bold text-slate-800 mt-1">@(expediente.RitmoCardiaco?.ToString() ?? "—") <span class="text-xs font-medium text-slate-400">BPM</span></div>
+                </div>
+                <div class="rounded-xl border border-slate-100 p-4">
+                    <div class="text-slate-500">Temperatura</div>
+                    <div class="text-xl font-bold text-slate-800 mt-1">@(expediente.Temperatura?.ToString("0.0") ?? "—") <span class="text-xs font-medium text-slate-400">°C</span></div>
+                </div>
+                <div class="rounded-xl border border-slate-100 p-4">
+                    <div class="text-slate-500">Presión arterial</div>
+                    <div class="text-xl font-bold text-slate-800 mt-1">@(string.IsNullOrWhiteSpace(expediente.PresionArterial) ? "—/—" : expediente.PresionArterial)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <h2 class="font-semibold text-slate-800 mb-4">Diagnósticos</h2>
+            @if (expediente.Diagnosticos?.Any() != true)
+            {
+                <p class="text-slate-400 text-sm">Aún no hay diagnósticos registrados.</p>
+            }
+            else
+            {
+                <div class="space-y-3">
+                    @foreach (var d in expediente.Diagnosticos.OrderByDescending(x => x.FechaRegistro))
+                    {
+                        <div class="border border-slate-100 rounded-xl p-4">
+                            <div class="font-medium text-slate-800 text-sm">@d.Descripcion</div>
+                            <div class="text-xs text-slate-400 mt-1">@d.NombreMedico • @d.FechaRegistro.ToString("dd MMM yyyy")</div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <h2 class="font-semibold text-slate-800 mb-4">Recetas</h2>
+            @if (expediente.Recetas?.Any() != true)
+            {
+                <p class="text-slate-400 text-sm">Aún no hay recetas registradas.</p>
+            }
+            else
+            {
+                <div class="space-y-3">
+                    @foreach (var r in expediente.Recetas.OrderByDescending(x => x.FechaEmision))
+                    {
+                        <div class="border border-slate-100 rounded-xl p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="font-medium text-slate-800 text-sm">@r.Medicamento</div>
+                                <span class="text-xs px-2 py-0.5 rounded-full @(r.EstaActiva ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500")">
+                                    @(r.EstaActiva ? "Activa" : "Inactiva")
+                                </span>
+                            </div>
+                            <div class="text-xs text-slate-500 mt-1">Dosis: @r.Dosis</div>
+                            @if (!string.IsNullOrWhiteSpace(r.Instrucciones))
+                            {
+                                <div class="text-xs text-slate-400 mt-1">@r.Instrucciones</div>
+                            }
+                            <div class="text-xs text-slate-400 mt-2">@r.NombreMedico • @r.FechaEmision.ToString("dd MMM yyyy")</div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>

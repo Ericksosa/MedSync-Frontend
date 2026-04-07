@@ -91,13 +91,28 @@ public class MedicoController : BaseController
 
     // GET /Medico/Agenda?fecha=2026-03-30
     [HttpGet]
-    public async Task<IActionResult> Agenda(string? fecha)
+    public async Task<IActionResult> Agenda(string? fecha, int? hospitalId)
     {
         var check = CheckAccess(); if (check != null) return check;
 
         var medicoId = await ResolveAndCacheMedicoId();
+        var hospitalesAsignados = new List<HospitalAsignadoViewModel>();
+
+        if (medicoId.HasValue)
+        {
+            var hospitalesAsignadosResult = await Api.GetAsync<List<HospitalAsignadoViewModel>>($"/api/doctors/{medicoId}/hospitales");
+            if (hospitalesAsignadosResult.Success)
+                hospitalesAsignados = hospitalesAsignadosResult.Data ?? [];
+        }
+
+        var hospitalIdSeleccionado = hospitalId.HasValue && hospitalesAsignados.Any(h => h.HospitalId == hospitalId.Value)
+            ? hospitalId
+            : null;
+
         ViewBag.MedicoId = medicoId;
         ViewBag.NombreDoctor = Auth.GetUserName();
+        ViewBag.HospitalesAsignados = hospitalesAsignados;
+        ViewBag.HospitalIdSeleccionado = hospitalIdSeleccionado;
         return View();
     }
 
@@ -173,6 +188,67 @@ public class MedicoController : BaseController
         return RedirectToAction("Paciente", new { id = pacienteId });
     }
 
+    // POST /Medico/ActualizarFechaNacimientoPaciente
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ActualizarFechaNacimientoPaciente(
+        int pacienteId,
+        string nombre,
+        string apellido,
+        string? email,
+        string? telefono,
+        DateTime fechaNacimiento)
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        if (fechaNacimiento == default || fechaNacimiento > DateTime.Today)
+        {
+            SetError("La fecha de nacimiento indicada no es válida.");
+            return RedirectToAction("Paciente", new { id = pacienteId });
+        }
+
+        var payload = new PacienteActualizarViewModel
+        {
+            Nombre = nombre,
+            Apellido = apellido,
+            Email = email,
+            Telefono = telefono,
+            FechaNacimiento = fechaNacimiento
+        };
+
+        var result = await Api.PutAsync<object>($"/api/patients/{pacienteId}", payload);
+        if (!result.Success) SetError(result.Error ?? "No se pudo actualizar la fecha de nacimiento.");
+        else SetSuccess("Fecha de nacimiento actualizada.");
+
+        return RedirectToAction("Paciente", new { id = pacienteId });
+    }
+
+    // POST /Medico/ActualizarSignosVitales
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ActualizarSignosVitales(
+        int expedienteId,
+        int pacienteId,
+        int? ritmoCardiaco,
+        decimal? temperatura,
+        string? presionArterial)
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        var payload = new SignosVitalesActualizarViewModel
+        {
+            RitmoCardiaco = ritmoCardiaco,
+            Temperatura = temperatura,
+            PresionArterial = presionArterial
+        };
+
+        var result = await Api.PatchAsync<object>($"/api/medicalrecords/{expedienteId}/signos-vitales", payload);
+        if (!result.Success) SetError(result.Error ?? "No se pudieron actualizar los signos vitales.");
+        else SetSuccess("Signos vitales actualizados.");
+
+        return RedirectToAction("Paciente", new { id = pacienteId });
+    }
+
     // POST /Medico/CambiarEstado
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -201,5 +277,137 @@ public class MedicoController : BaseController
         ViewBag.Citas = result.Data?.OrderByDescending(c => c.FechaHora).ToList() ?? [];
 
         return View();
+    }
+
+    // GET /Medico/CompletarCitas?fecha=2026-04-07
+    [HttpGet]
+    public async Task<IActionResult> CompletarCitas(string? fecha)
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        var medicoId = await ResolveAndCacheMedicoId();
+        if (medicoId == null)
+        {
+            ViewBag.Citas = new List<CitaViewModel>();
+            ViewBag.Fecha = DateTime.Today.ToString("yyyy-MM-dd");
+            return View();
+        }
+
+        var fechaSeleccionada = DateTime.TryParse(fecha, out var f) ? f.Date : DateTime.Today;
+        var fechaQuery = fechaSeleccionada.ToString("yyyy-MM-dd");
+
+        var result = await Api.GetAsync<List<CitaViewModel>>($"/api/appointments/medico/{medicoId}/agenda?fecha={fechaQuery}");
+        ViewBag.Citas = result.Data?.OrderBy(c => c.FechaHora).ToList() ?? [];
+        ViewBag.Fecha = fechaQuery;
+
+        return View();
+    }
+
+    // GET /Medico/Disponibilidad
+    [HttpGet]
+    public async Task<IActionResult> Disponibilidad(int? hospitalId)
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        var medicoId = await ResolveAndCacheMedicoId();
+        if (medicoId == null)
+        {
+            SetError("No se encontró tu perfil de doctor.");
+            ViewBag.HospitalesAsignados = new List<HospitalAsignadoViewModel>();
+            ViewBag.Disponibilidades = new List<DisponibilidadViewModel>();
+            return View();
+        }
+
+        var hospitalesAsignadosResult = await Api.GetAsync<List<HospitalAsignadoViewModel>>($"/api/doctors/{medicoId}/hospitales");
+        if (!hospitalesAsignadosResult.Success)
+        {
+            SetError(hospitalesAsignadosResult.Error ?? "No se pudieron cargar tus hospitales asignados.");
+            ViewBag.HospitalesAsignados = new List<HospitalAsignadoViewModel>();
+            ViewBag.Disponibilidades = new List<DisponibilidadViewModel>();
+            return View();
+        }
+
+        var hospitalesAsignados = hospitalesAsignadosResult.Data ?? [];
+
+        if (!hospitalesAsignados.Any())
+        {
+            SetError("No tienes hospitales asignados. Contacta al administrador.");
+            ViewBag.HospitalesAsignados = new List<HospitalAsignadoViewModel>();
+            ViewBag.Disponibilidades = new List<DisponibilidadViewModel>();
+            return View();
+        }
+
+        var selectedHospitalId = hospitalId.HasValue && hospitalesAsignados.Any(h => h.HospitalId == hospitalId.Value)
+            ? hospitalId.Value
+            : hospitalesAsignados.First().HospitalId;
+
+        var disponibilidadResult = await Api.GetAsync<List<DisponibilidadViewModel>>($"/api/doctors/{medicoId}/disponibilidad?hospitalId={selectedHospitalId}");
+
+        ViewBag.HospitalesAsignados = hospitalesAsignados;
+        ViewBag.HospitalIdSeleccionado = selectedHospitalId;
+        ViewBag.NombreHospitalSeleccionado = hospitalesAsignados.First(h => h.HospitalId == selectedHospitalId).NombreHospital;
+        ViewBag.MedicoIdSeleccionado = medicoId;
+        ViewBag.Disponibilidades = disponibilidadResult.Data?.OrderBy(d => d.DiaSemana).ThenBy(d => d.HoraInicio).ToList() ?? [];
+
+        return View();
+    }
+
+    // POST /Medico/AgregarDisponibilidad
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AgregarDisponibilidad(int hospitalId, int diaSemana, string horaInicio, string horaFin)
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        var medicoId = await ResolveAndCacheMedicoId();
+        if (medicoId == null)
+        {
+            SetError("No se encontró tu perfil de doctor.");
+            return RedirectToAction(nameof(Disponibilidad));
+        }
+
+        var hospitalesAsignadosResult = await Api.GetAsync<List<HospitalAsignadoViewModel>>($"/api/doctors/{medicoId}/hospitales");
+        if (!hospitalesAsignadosResult.Success)
+        {
+            SetError(hospitalesAsignadosResult.Error ?? "No se pudieron validar tus hospitales asignados.");
+            return RedirectToAction(nameof(Disponibilidad));
+        }
+
+        var hospitalesAsignados = hospitalesAsignadosResult.Data ?? [];
+
+        if (!hospitalesAsignados.Any(h => h.HospitalId == hospitalId))
+        {
+            SetError("El hospital seleccionado no está asignado a tu perfil.");
+            return RedirectToAction(nameof(Disponibilidad));
+        }
+
+        var payload = new DisponibilidadCrearViewModel
+        {
+            MedicoId = medicoId.Value,
+            HospitalId = hospitalId,
+            DiaSemana = diaSemana,
+            HoraInicio = horaInicio,
+            HoraFin = horaFin
+        };
+
+        var result = await Api.PostAsync<DisponibilidadViewModel>("/api/doctors/disponibilidad", payload);
+        if (!result.Success) SetError(result.Error ?? "No se pudo agregar la disponibilidad.");
+        else SetSuccess("Disponibilidad guardada correctamente.");
+
+        return RedirectToAction(nameof(Disponibilidad), new { hospitalId });
+    }
+
+    // POST /Medico/EliminarDisponibilidad
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> EliminarDisponibilidad(int disponibilidadId, int hospitalId)
+    {
+        var check = CheckAccess(); if (check != null) return check;
+
+        var ok = await Api.DeleteAsync($"/api/doctors/disponibilidad/{disponibilidadId}");
+        if (!ok) SetError("No se pudo eliminar la disponibilidad.");
+        else SetSuccess("Disponibilidad eliminada.");
+
+        return RedirectToAction(nameof(Disponibilidad), new { hospitalId });
     }
 }

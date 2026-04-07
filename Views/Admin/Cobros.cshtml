@@ -1,0 +1,211 @@
+@using MedSync_Frontend.Models.ViewModels
+@{
+    ViewData["Title"] = "Cobros de Consultorio";
+    var cobros = ViewBag.Cobros as List<CobroViewModel> ?? [];
+    var hospitales = ViewBag.Hospitales as List<HospitalViewModel> ?? [];
+    var endpointDisponible = ViewBag.CobrosEndpointDisponible as bool? ?? true;
+    var meses = new[]
+    {
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    };
+    var totalPendiente = cobros.Where(c => c.Estado == "Pendiente").Sum(c => c.Monto);
+    var totalPagado = cobros.Where(c => c.Estado == "Pagado").Sum(c => c.Monto);
+}
+
+<div class="max-w-5xl mx-auto space-y-6">
+
+    <div class="flex items-start justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-800">Cobros de Consultorio</h1>
+            <p class="text-slate-500 text-sm mt-1">Gestión de cobros por mes para que cada doctor vea cuánto debe pagar en ese período.</p>
+        </div>
+        <button onclick="document.getElementById('modalCobro').classList.remove('hidden')"
+                class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
+            <i data-lucide="plus" class="w-4 h-4"></i> Registrar Cobro
+        </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="w-10 h-10 bg-yellow-50 rounded-xl flex items-center justify-center text-yellow-600 mb-3">
+                <i data-lucide="clock" class="w-5 h-5"></i>
+            </div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Pendiente</p>
+            <p class="text-2xl font-bold text-slate-800 mt-1">$@totalPendiente.ToString("N2")</p>
+            <p class="text-xs text-slate-400 mt-1">@cobros.Count(c => c.Estado == "Pendiente") cobros</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-600 mb-3">
+                <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+            </div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Pagado</p>
+            <p class="text-2xl font-bold text-slate-800 mt-1">$@totalPagado.ToString("N2")</p>
+            <p class="text-xs text-slate-400 mt-1">@cobros.Count(c => c.Estado == "Pagado") cobros</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 mb-3">
+                <i data-lucide="receipt" class="w-5 h-5"></i>
+            </div>
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Cobros</p>
+            <p class="text-2xl font-bold text-slate-800 mt-1">@cobros.Count</p>
+            <p class="text-xs text-slate-400 mt-1">Registrados en el sistema</p>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <h3 class="font-semibold text-slate-800">Historial de Cobros por Mes</h3>
+            <a href="/Admin/EstadoCuenta" class="text-xs text-blue-600 hover:underline font-medium">Ver estado de cuenta →</a>
+        </div>
+
+        @if (!cobros.Any())
+        {
+            <div class="text-center py-12 text-slate-400">
+                <div class="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="receipt" class="w-6 h-6 text-slate-300"></i>
+                </div>
+                @if (endpointDisponible)
+                {
+                    <p class="text-sm">No hay cobros registrados todavía.</p>
+                    <p class="text-xs mt-1">La API respondió correctamente, pero aún no existen cobros para mostrar.</p>
+                }
+                else
+                {
+                    <p class="text-sm">No fue posible cargar cobros desde el backend.</p>
+                    <p class="text-xs mt-1">Revisa el estado de <code>/api/cobros/hospital/{id}</code> y la autenticación.</p>
+                }
+            </div>
+        }
+        else
+        {
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Doctor</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Hospital</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Mes</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
+                        <th class="text-right px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Monto</th>
+                        <th class="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    @foreach (var c in cobros)
+                    {
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-5 py-3 font-medium text-slate-700">@c.NombreMedico</td>
+                            <td class="px-5 py-3 text-slate-500">@c.NombreHospital</td>
+                            <td class="px-5 py-3 text-slate-500">@c.Periodo</td>
+                            <td class="px-5 py-3">
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold @(c.Estado == "Pagado" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700")">
+                                    @c.Estado
+                                </span>
+                            </td>
+                            <td class="px-5 py-3 text-right font-semibold text-slate-800">$@c.Monto.ToString("N2")</td>
+                            <td class="px-5 py-3 text-right">
+                                @if (c.Estado == "Pendiente")
+                                {
+                                    <form asp-controller="Admin" asp-action="MarcarCobroPagado" method="post" class="inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@c.Id" />
+                                        <button type="submit"
+                                                class="text-xs text-green-600 hover:text-green-800 font-medium border border-green-200 hover:bg-green-50 px-3 py-1.5 rounded-lg transition-colors">
+                                            Marcar pagado
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<!-- Modal: Registrar Cobro -->
+<div id="modalCobro" class="hidden fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-800">Registrar Cobro</h3>
+            <button onclick="document.getElementById('modalCobro').classList.add('hidden')"
+                    class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <form asp-controller="Admin" asp-action="RegistrarCobro" method="post">
+            @Html.AntiForgeryToken()
+            <div class="space-y-3 mb-5">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Hospital</label>
+                    <select name="HospitalId" id="cobro-hospitalId" required onchange="cargarMedicosCobro(this.value)"
+                            class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="">Seleccionar...</option>
+                        @foreach (var h in hospitales)
+                        {
+                            <option value="@h.Id">@h.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Doctor</label>
+                    <select name="MedicoId" id="cobro-medicoId" required
+                            class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="">Seleccionar hospital primero...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Mes del cobro</label>
+                    <select name="Periodo" required
+                            class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="">Seleccionar mes...</option>
+                        @foreach (var mes in meses)
+                        {
+                            <option value="@mes">@mes</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Monto (RD$)</label>
+                    <input name="Monto" type="number" step="0.01" min="0.01" required
+                           class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+            </div>
+            <input type="hidden" name="Estado" value="Pendiente" />
+            <div class="flex gap-2 justify-end">
+                <button type="button" onclick="document.getElementById('modalCobro').classList.add('hidden')"
+                        class="px-4 py-2 text-sm text-slate-500 hover:bg-slate-50 rounded-xl">Cancelar</button>
+                <button type="submit"
+                        class="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold">
+                    <i data-lucide="plus" class="w-4 h-4"></i> Registrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+async function cargarMedicosCobro(hospitalId) {
+    const sel = document.getElementById('cobro-medicoId');
+    sel.innerHTML = '<option value="">Cargando...</option>';
+    if (!hospitalId) { sel.innerHTML = '<option value="">Seleccionar hospital primero...</option>'; return; }
+    try {
+        const medicos = await fetch(`/Admin/ObtenerMedicosPorHospital?hospitalId=${hospitalId}`).then(r => r.json());
+        sel.innerHTML = '<option value="">Seleccionar médico...</option>';
+        medicos.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = `Dr. ${m.nombre} ${m.apellido}`;
+            sel.appendChild(opt);
+        });
+        if (medicos.length === 0) sel.innerHTML = '<option value="">No hay médicos en este hospital</option>';
+    } catch {
+        sel.innerHTML = '<option value="">Error al cargar médicos</option>';
+    }
+}
+</script>
+}

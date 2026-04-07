@@ -8,8 +8,19 @@ public class ExpedienteViewModel
     public int PacienteId { get; set; }
     public string NombrePaciente { get; set; } = "";
     public DateTime CreadoEn { get; set; }
+    public int? RitmoCardiaco { get; set; }
+    public decimal? Temperatura { get; set; }
+    public string? PresionArterial { get; set; }
+    public DateTime? FechaHoraUltimaActualizacionSignos { get; set; }
     public IEnumerable<DiagnosticoViewModel> Diagnosticos { get; set; } = [];
     public IEnumerable<RecetaViewModel> Recetas { get; set; } = [];
+}
+
+public class SignosVitalesActualizarViewModel
+{
+    public int? RitmoCardiaco { get; set; }
+    public decimal? Temperatura { get; set; }
+    public string? PresionArterial { get; set; }
 }
 
 public class DiagnosticoViewModel

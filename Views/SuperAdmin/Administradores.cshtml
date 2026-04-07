@@ -1,0 +1,171 @@
+@using MedSync_Frontend.Models.ViewModels
+@{
+    ViewData["Title"] = "Gestión de Administradores";
+    var admins = ViewBag.Administradores as List<UsuarioViewModel> ?? [];
+    var hospitales = ViewBag.Hospitales as List<HospitalViewModel> ?? [];
+}
+
+<div class="max-w-5xl mx-auto space-y-6">
+
+    <div class="flex items-start justify-between">
+        <div>
+            <div class="flex items-center gap-2 mb-1">
+                <span class="px-2.5 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full uppercase tracking-wider">Acceso Exclusivo</span>
+            </div>
+            <h1 class="text-2xl font-bold text-slate-800">Gestión de Administradores</h1>
+            <p class="text-slate-500 text-sm mt-1">Solo el Super Administrador puede crear y gestionar cuentas de administrador.</p>
+        </div>
+        <button onclick="document.getElementById('modalAdmin').classList.remove('hidden')"
+                class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
+            <i data-lucide="user-plus" class="w-4 h-4"></i> Nuevo Administrador
+        </button>
+    </div>
+
+    <!-- Stats banner -->
+    <div class="bg-indigo-600 text-white rounded-2xl p-5 flex items-center justify-between">
+        <div>
+            <p class="text-indigo-200 text-sm">Total en el sistema</p>
+            <p class="text-3xl font-bold mt-1">@admins.Count(a => a.EstaActivo) Administradores Activos</p>
+        </div>
+        <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center">
+            <i data-lucide="shield-check" class="w-7 h-7 text-white"></i>
+        </div>
+    </div>
+
+    <!-- Tabla de administradores -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <h3 class="font-semibold text-slate-800">Listado de Administradores</h3>
+            <span class="text-sm text-slate-400">@admins.Count registrados</span>
+        </div>
+
+        @if (!admins.Any())
+        {
+            <div class="text-center py-12 text-slate-400">
+                <div class="flex justify-center mb-3">
+                    <div class="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center">
+                        <i data-lucide="user-x" class="w-7 h-7 text-indigo-300"></i>
+                    </div>
+                </div>
+                <p class="text-sm font-medium text-slate-500">No hay administradores registrados</p>
+                <p class="text-xs text-slate-400 mt-1">O el endpoint <code>/api/auth/users?rol=Administrador</code> no está disponible aún.</p>
+            </div>
+        }
+        else
+        {
+            <table class="w-full text-sm">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Administrador</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Creado</th>
+                        <th class="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    @foreach (var a in admins)
+                    {
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-5 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-xs font-bold text-indigo-600 flex-shrink-0">
+                                        @(a.NombreCompleto.Length > 0 ? a.NombreCompleto[0].ToString().ToUpper() : "A")
+                                    </div>
+                                    <span class="font-medium text-slate-700">@a.NombreCompleto</span>
+                                </div>
+                            </td>
+                            <td class="px-5 py-4 text-slate-500">@a.Email</td>
+                            <td class="px-5 py-4">
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold @(a.EstaActivo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600")">
+                                    @(a.EstaActivo ? "ACTIVO" : "INACTIVO")
+                                </span>
+                            </td>
+                            <td class="px-5 py-4 text-slate-400 text-xs">@a.CreadoEn.ToString("dd/MM/yyyy")</td>
+                            <td class="px-5 py-4 text-right">
+                                <form asp-controller="SuperAdmin" asp-action="ToggleAdministrador" method="post" class="inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="userId" value="@a.Id" />
+                                    <input type="hidden" name="estaActivo" value="@(!a.EstaActivo)" />
+                                    <button type="submit"
+                                            class="inline-flex items-center gap-1.5 text-xs @(a.EstaActivo ? "text-red-500 hover:text-red-700" : "text-green-600 hover:text-green-800") font-medium">
+                                        <i data-lucide="@(a.EstaActivo ? "user-x" : "user-check")" class="w-3.5 h-3.5"></i>
+                                        @(a.EstaActivo ? "Desactivar" : "Activar")
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<!-- Modal: Crear Administrador -->
+<div id="modalAdmin" class="hidden fixed inset-0 bg-black/30 flex items-center justify-center z-50 py-6">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <h3 class="font-semibold text-slate-800">Nuevo Administrador</h3>
+                <p class="text-xs text-slate-400 mt-0.5">El administrador gestionará los hospitales asignados.</p>
+            </div>
+            <button onclick="document.getElementById('modalAdmin').classList.add('hidden')"
+                    class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <form asp-controller="SuperAdmin" asp-action="CrearAdministrador" method="post">
+            @Html.AntiForgeryToken()
+
+            <div class="space-y-3 mb-5">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Nombre</label>
+                        <input name="Nombre" required type="text"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Apellido</label>
+                        <input name="Apellido" required type="text"
+                               class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Email</label>
+                    <input name="Email" required type="email"
+                           class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Contraseña (mín. 8 caracteres)</label>
+                    <input name="Contrasena" required type="password" minlength="8"
+                           class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                </div>
+                @if (hospitales.Any())
+                {
+                    <div>
+                        <label class="block text-xs text-slate-500 mb-1">Hospital asignado <span class="text-slate-300">(opcional)</span></label>
+                        <select name="hospitalId"
+                                class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                            <option value="">Sin asignar</option>
+                            @foreach (var h in hospitales.Where(h => h.EstaActivo))
+                            {
+                                <option value="@h.Id">@h.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                }
+            </div>
+
+            <div class="flex gap-2 justify-end">
+                <button type="button" onclick="document.getElementById('modalAdmin').classList.add('hidden')"
+                        class="px-4 py-2 text-sm text-slate-500 hover:bg-slate-50 rounded-xl">Cancelar</button>
+                <button type="submit"
+                        class="flex items-center gap-2 px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i> Crear Administrador
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,183 @@
+@{
+    ViewData["Title"] = "Mi Perfil";
+    var nombre = ViewBag.Nombre as string ?? "";
+    var email = ViewBag.Email as string ?? "";
+    var rol = ViewBag.Rol as string ?? "";
+    var editar = ViewBag.EditarPerfilModel as MedSync_Frontend.Models.ViewModels.PerfilActualizarViewModel
+        ?? new MedSync_Frontend.Models.ViewModels.PerfilActualizarViewModel { Nombre = "", Apellido = "", Email = email };
+
+    var (rolBg, rolFg, rolLabel) = rol switch {
+        "SuperAdmin"    => ("bg-purple-100", "text-purple-700", "Super Administrador"),
+        "Administrador" => ("bg-indigo-100", "text-indigo-700", "Administrador"),
+        "Doctor"        => ("bg-blue-100",   "text-blue-700",   "Doctor"),
+        _               => ("bg-green-100",  "text-green-700",  "Paciente")
+    };
+}
+
+<div class="max-w-2xl mx-auto space-y-5">
+
+    <div>
+        <h1 class="text-2xl font-bold text-slate-800">Mi Perfil</h1>
+        <p class="text-slate-500 text-sm mt-1">Tu información de cuenta en MedSync.</p>
+    </div>
+
+    <!-- Avatar + info -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+        <div class="flex items-center gap-5 mb-6">
+            <div class="w-16 h-16 rounded-full bg-blue-600 text-white text-2xl font-bold flex items-center justify-center shadow-sm flex-shrink-0">
+                @(nombre.Length > 0 ? nombre[0].ToString().ToUpper() : "U")
+            </div>
+            <div>
+                <h2 class="text-lg font-semibold text-slate-800">@nombre</h2>
+                <p class="text-sm text-slate-500">@email</p>
+                <span class="mt-1 inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold @rolBg @rolFg">@rolLabel</span>
+            </div>
+        </div>
+
+        <div class="divide-y divide-slate-50">
+            <div class="flex items-center justify-between py-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400">
+                        <i data-lucide="user" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400">Nombre</p>
+                        <p class="text-sm font-medium text-slate-700">@nombre</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between py-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400">
+                        <i data-lucide="mail" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400">Email</p>
+                        <p class="text-sm font-medium text-slate-700">@email</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center justify-between py-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400">
+                        <i data-lucide="shield" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400">Rol</p>
+                        <p class="text-sm font-medium text-slate-700">@rolLabel</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Editar perfil -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+        <h3 class="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <i data-lucide="user-cog" class="w-4 h-4 text-slate-500"></i> Editar datos de perfil
+        </h3>
+        <form asp-controller="Perfil" asp-action="ActualizarPerfil" method="post" class="space-y-3">
+            @Html.AntiForgeryToken()
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Nombre</label>
+                    <input name="Nombre" value="@editar.Nombre" required
+                           class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">Apellido</label>
+                    <input name="Apellido" value="@editar.Apellido" required
+                           class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs text-slate-500 mb-1">Correo</label>
+                <input name="Email" type="email" value="@editar.Email" required
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold">Guardar cambios</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Seguridad -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+        <h3 class="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <i data-lucide="lock-keyhole" class="w-4 h-4 text-slate-500"></i> Cambiar contraseña
+        </h3>
+        <form asp-controller="Perfil" asp-action="CambiarContrasena" method="post" class="space-y-3">
+            @Html.AntiForgeryToken()
+            <div>
+                <label class="block text-xs text-slate-500 mb-1">Contraseña actual</label>
+                <input name="ContrasenaActual" type="password" required
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+            <div>
+                <label class="block text-xs text-slate-500 mb-1">Nueva contraseña</label>
+                <input name="NuevaContrasena" type="password" minlength="8" required
+                       class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="px-4 py-2 text-sm bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-semibold">Actualizar contraseña</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Acciones rápidas según rol -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+        <h3 class="font-semibold text-slate-800 mb-4">Acceso rápido</h3>
+        <div class="grid grid-cols-2 gap-3">
+            @if (rol == "Paciente")
+            {
+                <a href="/Paciente/Dashboard" class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 text-blue-500"></i>
+                    <span class="text-sm text-slate-600">Dashboard</span>
+                </a>
+                <a href="/Paciente/ReservarCita" class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors">
+                    <i data-lucide="calendar-plus" class="w-4 h-4 text-blue-500"></i>
+                    <span class="text-sm text-slate-600">Agendar Cita</span>
+                </a>
+            }
+            else if (rol == "Doctor")
+            {
+                <a href="/Medico/Dashboard" class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 text-blue-500"></i>
+                    <span class="text-sm text-slate-600">Dashboard</span>
+                </a>
+                <a href="/Medico/Agenda" class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors">
+                    <i data-lucide="calendar" class="w-4 h-4 text-blue-500"></i>
+                    <span class="text-sm text-slate-600">Agenda</span>
+                </a>
+            }
+            else if (rol == "Administrador")
+            {
+                <a href="/Admin/Dashboard" class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 text-indigo-500"></i>
+                    <span class="text-sm text-slate-600">Dashboard</span>
+                </a>
+                <a href="/Admin/Hospitales" class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors">
+                    <i data-lucide="building-2" class="w-4 h-4 text-indigo-500"></i>
+                    <span class="text-sm text-slate-600">Hospitales</span>
+                </a>
+            }
+            else if (rol == "SuperAdmin")
+            {
+                <a href="/SuperAdmin/Dashboard" class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 text-purple-500"></i>
+                    <span class="text-sm text-slate-600">Panel</span>
+                </a>
+                <a href="/SuperAdmin/Administradores" class="flex items-center gap-3 p-3 border border-slate-100 rounded-xl hover:bg-slate-50 transition-colors">
+                    <i data-lucide="user-cog" class="w-4 h-4 text-purple-500"></i>
+                    <span class="text-sm text-slate-600">Administradores</span>
+                </a>
+            }
+        </div>
+    </div>
+
+    <div class="text-center">
+        <a href="/Auth/Logout" class="inline-flex items-center gap-2 text-sm text-red-500 hover:text-red-700 font-medium">
+            <i data-lucide="log-out" class="w-4 h-4"></i> Cerrar sesión
+        </a>
+    </div>
+</div>
