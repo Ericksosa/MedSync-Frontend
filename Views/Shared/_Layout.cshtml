@@ -146,10 +146,20 @@
         <!-- Top bar -->
         <header class="bg-white border-b border-slate-100 px-6 py-3 flex items-center justify-between sticky top-0 z-20">
             <div class="text-sm text-slate-500 font-medium">@ViewData["Title"]</div>
-            <div class="flex items-center gap-2">
-                <button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors">
+            <div class="flex items-center gap-2 relative">
+                <button id="btn-notificaciones" type="button" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors relative">
                     <i data-lucide="bell" class="w-4 h-4"></i>
+                    <span id="badge-notificaciones" class="hidden absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] leading-4 text-center font-semibold"></span>
                 </button>
+                <div id="panel-notificaciones" class="hidden absolute right-0 top-11 w-96 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded-xl shadow-xl z-40 overflow-hidden">
+                    <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-slate-700">Notificaciones</h3>
+                        <button id="btn-marcar-todas" type="button" class="text-xs text-blue-600 hover:text-blue-700 font-medium">Marcar todas</button>
+                    </div>
+                    <div id="lista-notificaciones" class="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                        <div class="px-4 py-6 text-sm text-slate-500 text-center">Cargando notificaciones...</div>
+                    </div>
+                </div>
                 <button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors">
                     <i data-lucide="help-circle" class="w-4 h-4"></i>
                 </button>
@@ -195,6 +205,143 @@ else
 
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script>lucide.createIcons();</script>
+<script>
+    (function () {
+        const isAuthenticated = @isAuth.ToString().ToLowerInvariant();
+        if (!isAuthenticated) return;
+
+        const bellButton = document.getElementById('btn-notificaciones');
+        const panel = document.getElementById('panel-notificaciones');
+        const list = document.getElementById('lista-notificaciones');
+        const badge = document.getElementById('badge-notificaciones');
+        const markAllButton = document.getElementById('btn-marcar-todas');
+
+        if (!bellButton || !panel || !list || !badge || !markAllButton) return;
+
+        function updateBadge(count) {
+            if (!count || count <= 0) {
+                badge.classList.add('hidden');
+                badge.textContent = '';
+                return;
+            }
+            badge.classList.remove('hidden');
+            badge.textContent = count > 99 ? '99+' : String(count);
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function formatDate(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '';
+            return date.toLocaleString('es-DO', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+        function renderItems(items) {
+            if (!items || items.length === 0) {
+                list.innerHTML = '<div class="px-4 py-6 text-sm text-slate-500 text-center">No tienes notificaciones nuevas.</div>';
+                return;
+            }
+
+            list.innerHTML = items.map(item => {
+                const dateText = formatDate(item.fecha);
+                const cardClass = item.leida
+                    ? 'bg-white hover:bg-slate-50'
+                    : 'bg-blue-50/40 hover:bg-blue-50';
+
+                return `
+                    <button type="button" data-id="${escapeHtml(item.id)}" data-link="${escapeHtml(item.link || '')}" class="notif-item w-full text-left px-4 py-3 transition-colors ${cardClass}">
+                        <div class="flex items-start gap-3">
+                            <div class="mt-1 w-2 h-2 rounded-full ${item.leida ? 'bg-slate-300' : 'bg-blue-500'}"></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-semibold text-slate-700 truncate">${escapeHtml(item.titulo || 'Notificacion')}</div>
+                                <div class="text-xs text-slate-600 mt-0.5">${escapeHtml(item.mensaje || '')}</div>
+                                ${dateText ? `<div class="text-[11px] text-slate-400 mt-1">${escapeHtml(dateText)}</div>` : ''}
+                            </div>
+                        </div>
+                    </button>`;
+            }).join('');
+
+            list.querySelectorAll('.notif-item').forEach(el => {
+                el.addEventListener('click', async () => {
+                    const id = el.getAttribute('data-id');
+                    const link = el.getAttribute('data-link');
+
+                    if (!id) return;
+                    try {
+                        await fetch('/Notificaciones/MarcarLeida', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id })
+                        });
+                    } catch (_) {
+                        // Keep UX responsive even if mark-read fails.
+                    }
+
+                    if (link) {
+                        window.location.href = link;
+                        return;
+                    }
+
+                    await loadFeed();
+                });
+            });
+        }
+
+        async function loadFeed() {
+            try {
+                const response = await fetch('/Notificaciones/Feed', { cache: 'no-store' });
+                if (!response.ok) throw new Error('No se pudo cargar notificaciones.');
+
+                const data = await response.json();
+                updateBadge(data.noLeidas || 0);
+                renderItems(data.items || []);
+            } catch (_) {
+                list.innerHTML = '<div class="px-4 py-6 text-sm text-red-500 text-center">Error al cargar notificaciones.</div>';
+                updateBadge(0);
+            }
+        }
+
+        bellButton.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            const isHidden = panel.classList.contains('hidden');
+            if (isHidden) {
+                panel.classList.remove('hidden');
+                await loadFeed();
+                return;
+            }
+            panel.classList.add('hidden');
+        });
+
+        markAllButton.addEventListener('click', async (event) => {
+            event.preventDefault();
+            try {
+                await fetch('/Notificaciones/MarcarTodasLeidas', { method: 'POST' });
+            } catch (_) {
+                // Ignore transient network errors.
+            }
+            await loadFeed();
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!panel.contains(event.target) && !bellButton.contains(event.target)) {
+                panel.classList.add('hidden');
+            }
+        });
+
+        loadFeed();
+    })();
+</script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

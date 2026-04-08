@@ -43,7 +43,7 @@ public class PacienteController : BaseController
 
         var paciente = emailResult.Data!;
         var citasResult = await Api.GetAsync<List<CitaViewModel>>($"/api/appointments/paciente/{paciente.Id}");
-        var citas = citasResult.Data ?? [];
+        var citas = (citasResult.Data ?? []).Where(c => c.Estado != "Completada").ToList();
         var expedienteResult = await Api.GetAsync<ExpedienteViewModel>("/api/medicalrecords/me");
 
         ViewBag.Paciente = paciente;

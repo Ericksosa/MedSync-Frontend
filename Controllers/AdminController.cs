@@ -39,7 +39,8 @@ public class AdminController : BaseController
         foreach (var h in hospitales.Where(h => h.EstaActivo))
         {
             var citasResult = await Api.GetAsync<List<CitaViewModel>>($"/api/appointments/hospital/{h.Id}");
-            if (citasResult.Success) totalCitas += citasResult.Data?.Count ?? 0;
+            if (citasResult.Success)
+                totalCitas += citasResult.Data?.Count(c => c.Estado != "Completada") ?? 0;
 
             var medicosResult = await Api.GetAsync<List<MedicoViewModel>>($"/api/doctors/hospital/{h.Id}");
             if (medicosResult.Success) totalMedicos += medicosResult.Data?.Count(m => m.EstaActivo) ?? 0;

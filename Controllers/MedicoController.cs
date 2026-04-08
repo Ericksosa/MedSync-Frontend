@@ -80,7 +80,7 @@ public class MedicoController : BaseController
 
         var hoy = DateTime.Today.ToString("yyyy-MM-dd");
         var agendaResult = await Api.GetAsync<List<CitaViewModel>>($"/api/appointments/medico/{medicoId}/agenda?fecha={hoy}");
-        var citas = agendaResult.Data ?? [];
+        var citas = (agendaResult.Data ?? []).Where(c => c.Estado != "Completada").ToList();
 
         ViewBag.NombreDoctor = Auth.GetUserName();
         ViewBag.CitasHoy = citas.OrderBy(c => c.FechaHora).ToList();
